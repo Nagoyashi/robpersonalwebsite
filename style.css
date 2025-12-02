@@ -191,3 +191,35 @@ a:hover {
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.5);
 }
+
+/* Ensure your font is Monospace for the full effect */
+.hero-content h2, .hero-content h1 {
+    font-family: 'Roboto Mono', monospace; 
+}
+
+/* 1. Typing Animation (Simulates the text appearing) */
+.typing-text {
+    /* Define the steps to hide the content and then reveal it */
+    width: 0; 
+    overflow: hidden;
+    white-space: nowrap;
+    animation: 
+      typing 3s steps(20, end) forwards; /* 3s typing time, 20 steps (characters) */
+}
+
+@keyframes typing {
+    from { width: 0 }
+    to { width: 100% }
+}
+
+/* 2. Blinking Cursor Animation */
+.cursor {
+    font-size: 2rem;
+    color: var(--color-accent); /* Your electric cyan color */
+    animation: blink 0.75s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
