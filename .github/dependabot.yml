@@ -1,0 +1,19 @@
+version: 2
+
+# No package manifests exist in this repo (it is hand-written HTML/CSS with no
+# build step), so the only ecosystem to keep current is the GitHub Actions used
+# by the workflows in .github/workflows/. Add a new block here if a manifest
+# (package.json, requirements.txt, etc.) is ever introduced.
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "chore"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"

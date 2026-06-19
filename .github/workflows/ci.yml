@@ -1,0 +1,66 @@
+name: CI
+
+# Static-site validation. There is no test suite (the app is hand-written
+# HTML/CSS), so CI checks the two things that actually break a static page:
+# malformed HTML structure, and references to local files that don't exist.
+# External URLs are intentionally NOT fetched here — they would make the gate
+# flaky. This job's name ("validate") is the required check for branch protection.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate HTML structure
+        run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
+          html=( **/*.html )
+          if [ ${#html[@]} -eq 0 ]; then
+            echo "::error::No HTML files found"; exit 1
+          fi
+          fail=0
+          for f in "${html[@]}"; do
+            echo "Checking structure: $f"
+            for tag in html head body; do
+              o=$(grep -oc "<$tag" "$f" || true)
+              c=$(grep -oc "</$tag>" "$f" || true)
+              if [ "$o" != "$c" ]; then
+                echo "::error file=$f::unbalanced <$tag> ($o open / $c close)"
+                fail=1
+              fi
+            done
+          done
+          exit $fail
+
+      - name: Check internal asset/link references
+        run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
+          fail=0
+          for f in **/*.html; do
+            dir=$(dirname "$f")
+            while IFS= read -r ref; do
+              case "$ref" in
+                http://*|https://*|//*|mailto:*|tel:*|data:*|\#*) continue ;;
+              esac
+              path="${ref%%#*}"; path="${path%%\?*}"
+              [ -z "$path" ] && continue
+              if [ ! -e "$dir/$path" ] && [ ! -e "$path" ]; then
+                echo "::error file=$f::missing local reference: $ref"
+                fail=1
+              fi
+            done < <(grep -oE '(href|src)="[^"]+"' "$f" | sed -E 's/^(href|src)="//; s/"$//')
+          done
+          exit $fail

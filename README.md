@@ -45,4 +45,17 @@ I have over 2 years of technical development experience coupled with over 5 year
 * **Email:** [kissrobertm@protonmail.com](mailto:kissrobertm@protonmail.com)
 
 ---
+
+## Project docs
+
+| Doc | Purpose |
+| :--- | :--- |
+| [CLAUDE.md](CLAUDE.md) | Agent operating manual + hard invariants / RULES |
+| [project.md](project.md) | Roadmap & phase-level status |
+| [DECISIONS.md](DECISIONS.md) | Architecture decision log |
+| [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | File map & code-placement conventions |
+| [DEPLOY.md](DEPLOY.md) | Deploy runbook (GitHub Pages) |
+| [docs/releases/](docs/releases/) | Per-release notes (source of GitHub Releases) |
+
+---
 *© 2026 Robert Kiss*
