@@ -29,8 +29,18 @@ default, and is honest: real data only, no invented metrics.
   fuller `/about`, an OG share image, and **rebuild-on-release** (a
   `repository_dispatch` / deploy-hook fired from each product repo so the fleet
   updates instantly instead of daily). Touches other repos → separate gated work.
-- **Phase 3 — Custom domain live.** [CONFIRM] Point `kissrobert.com` DNS at
-  Pages and verify (CNAME already in `public/`).
+- **Phase 3 — Custom domain live.** [CONFIRM] Point `kissrobert.com` DNS — see
+  the note under Phase 4: the domain now points at **Vercel**, not Pages.
+- **Phase 4 — Control center (`v0.3.0`).** kissrobert.com becomes a two-plane
+  system: the public site plus a private, authenticated **`/admin`** operations
+  console — the operator's source of truth for progress, analytics, and control
+  across all projects. **Phase A** (this cycle): migrate hosting to **Vercel**
+  (retire Pages), **Supabase** Postgres + GitHub-OAuth login gating `/admin`,
+  server connectors (reusing `github.ts`) + Vercel Cron, and the **Unified Ops
+  View** (one status line per project). Phases B–E (analytics depth, write-back
+  control plane, AI fleet-digest, business/revenue metrics) follow. Decisions in
+  [DECISIONS.md](DECISIONS.md) ADR-009…013; tasks on board #7. Built in TS with
+  the Odysseus fork as a blueprint only (no AGPL graft).
 
 ## Deferred / explicitly out of scope this cycle
 
