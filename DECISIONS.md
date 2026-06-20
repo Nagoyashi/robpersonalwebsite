@@ -27,6 +27,10 @@ from the codebase rather than told to me — please verify.
 > changes from "deploy from a branch" to "GitHub Actions" — Pages can't run the
 > Astro build, so a workflow builds and uploads the artifact. Custom domain
 > `kissrobert.com` is now set via `public/CNAME`.
+>
+> **⚠️ To be superseded by ADR-010 (planned, v0.3.0).** The control center
+> needs a backend; the whole site moves to **Vercel** and Pages is retired. Do
+> not finalize the Pages DNS in the meantime.
 
 - **Context.** No deploy target was configured; a static host is needed.
 - **Decision.** Serve `main` (root) via GitHub Pages.
@@ -126,3 +130,83 @@ from the codebase rather than told to me — please verify.
   dispatch` / deploy-hook fired from each product repo's release workflow. That
   touches other repos, so it's a separate, gated follow-up (tracked in
   project.md), not part of this cycle.
+
+---
+
+# Control center (v0.3.0) — decisions
+
+> The following ADRs are **Accepted, not yet implemented**. They record the
+> direction for turning kissrobert.com into a public site + private `/admin`
+> operations console. Target milestone: `v0.3.0` (Phase A). Each carries an
+> [ASK ME] gate at implementation time (hosting change, secrets, auth, merges).
+
+## ADR-009 — Two-plane architecture: public static + private `/admin`
+
+- **Status.** Accepted, not yet implemented (v0.3.0).
+- **Context.** kissrobert.com should become the operator's control center —
+  progress, analytics, and control across all of Robert's projects — without
+  compromising the fast, secret-free public site.
+- **Decision.** Split into two planes in one Astro app: a **public plane**
+  (prerendered, no secrets — the site as today) and a **private plane** at
+  `/admin` (server-rendered + API routes, authenticated, with a database and
+  server-side secrets).
+- **Rationale.** Keeps the public site's guarantees intact while letting the
+  admin be a stateful, secret-holding app. The "no secrets in the client" rule
+  is preserved (now scoped: public plane has none; private plane keeps them
+  server-side only). "No invented metrics" becomes even more load-bearing.
+- **Revisit when.** The admin outgrows a single app and warrants its own service.
+
+## ADR-010 — Host the whole site on Vercel; retire GitHub Pages
+
+- **Status.** Accepted, not yet implemented (v0.3.0). **Supersedes ADR-002/008.**
+- **Context.** A control center needs SSR, serverless API routes, scheduled jobs,
+  and secrets — none of which GitHub Pages can serve.
+- **Decision.** Deploy the entire site (public + `/admin`) on **Vercel** under
+  `kissrobert.com`; point DNS at Vercel; disable GitHub Pages. Public routes are
+  prerendered; `/admin` and `/api/*` run server-side.
+- **Rationale.** One host, one domain, one deploy; first-class Astro support;
+  Vercel Cron for scheduled data refresh; native env-var secret management.
+- **Revisit when.** Cost, lock-in, or data-sovereignty needs push toward self-
+  hosting (a VPS/Docker was the considered alternative).
+
+## ADR-011 — Supabase (Postgres + Auth) as the control-center datastore
+
+- **Status.** Accepted, not yet implemented (v0.3.0).
+- **Context.** The control center needs a source-of-truth database (metric
+  snapshots, connector config, audit log) and authentication.
+- **Decision.** Use **Supabase** — Postgres for data, Supabase Auth for login.
+- **Rationale.** Already used across Robert's other products (one less stack to
+  learn); managed Postgres; integrates with Vercel; service keys stay server-side.
+- **Revisit when.** Self-hosting Postgres or a different auth provider is wanted.
+
+## ADR-012 — `/admin` auth: GitHub OAuth, single-operator allowlist
+
+- **Status.** Accepted, not yet implemented (v0.3.0).
+- **Context.** Only Robert logs in; the admin controls sensitive operations.
+- **Decision.** Authenticate via **GitHub OAuth** (Supabase Auth), **allowlisted
+  to Robert's GitHub account only**. Audit-log control actions.
+- **Rationale.** No passwords; same identity that owns the repos and the GitHub
+  App; simplest strong option for one operator. (Passkeys / magic-link+TOTP were
+  the considered alternatives.)
+- **Revisit when.** More users need access, or stronger/phishing-resistant auth
+  (passkeys) is preferred.
+
+## ADR-013 — Control-center data layer: connector registry + central DB
+
+- **Status.** Accepted, not yet implemented (v0.3.0).
+- **Context.** Data must flow in from many projects (GitHub, web analytics,
+  uptime, revenue) and feed dashboards — and later flow back out as control
+  actions. The Odysseus fork (AGPL-3.0, Python/FastAPI) has an excellent
+  connector/MCP pattern and schema, but a direct graft would impose AGPL (repos
+  are going private) and a second stack.
+- **Decision.** Build a **typed connector registry** in TypeScript — each source
+  is a `fetch() → normalized records` module — writing to the central Postgres
+  (the source of truth), scheduled via Vercel Cron. **Pull** connectors first
+  (GitHub, reusing `github.ts`); **push** ingestion (per-project API keys) and
+  **write-back** (a read-WRITE GitHub App) come in later phases. Odysseus is used
+  as a **blueprint only**, not grafted — so the code stays closed and AGPL-free.
+- **Rationale.** One place data enters (mirrors `products.ts`); resilient
+  (snapshots survive a source outage); coherent single TS stack; no AGPL
+  entanglement. Every metric must trace to a real source — no fabricated numbers.
+- **Revisit when.** A real ETL/observability platform would do better than
+  hand-rolled connectors.
