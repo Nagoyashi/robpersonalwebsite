@@ -34,8 +34,9 @@ jobs:
           for f in "${html[@]}"; do
             echo "Checking structure: $f"
             for tag in html head body; do
-              o=$(grep -oc "<$tag" "$f" || true)
-              c=$(grep -oc "</$tag>" "$f" || true)
+              # Require a tag-terminating char so "<head" can't match "<header".
+              o=$(grep -oiE "<$tag([[:space:]/>])" "$f" | wc -l | tr -d ' ')
+              c=$(grep -oiE "</$tag[[:space:]]*>" "$f" | wc -l | tr -d ' ')
               if [ "$o" != "$c" ]; then
                 echo "::error file=$f::unbalanced <$tag> ($o open / $c close)"
                 fail=1
