@@ -1,6 +1,6 @@
 ---
 title: Now
-headline: "Shipping the v0.9 test & CI foundation for SpreadsheetMillionaire, and bringing SabeValor out of private beta."
+headline: "Shipping the v0.9 test & CI foundation for SpreadsheetMillionaire, and a couple of things still in stealth."
 updated: "2026-06-20"
 ---
 
@@ -9,7 +9,7 @@ A snapshot of what I'm focused on right now. Inspired by [nownownow.com](https:/
 ## Building
 
 - **SpreadsheetMillionaire** — hardening the calculator suite: test coverage and CI foundation, then rolling out the remaining calculators build-in-public.
-- **SabeValor** — moving the Portuguese property-valuation platform from private beta toward a public launch.
+- A couple of products still in **stealth** — more soon.
 
 ## Tinkering
 

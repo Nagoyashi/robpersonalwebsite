@@ -77,6 +77,7 @@ export const products: Product[] = [
     repo: { owner: 'Nagoyashi', name: 'sabevalor', public: false },
     fallbackVersion: null, // no releases cut yet
     fallbackDate: null,
+    include: false, // stealth during private beta — hidden from the public fleet
   },
   {
     slug: 'cutecumber',
