@@ -1,0 +1,13 @@
+---
+import { statusLabel } from '../lib/format';
+interface Props {
+  status: string;
+  kind: string;
+}
+const { status, kind } = Astro.props;
+const label = statusLabel(status, kind);
+// CLI tools render a "tool" pill (no uptime semantics); others use their status.
+const cls = kind === 'cli' ? 'tool' : status;
+---
+
+<span class={`pill ${cls}`}>{label}</span>

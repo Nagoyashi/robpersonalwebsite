@@ -1,0 +1,30 @@
+---
+// Slim sticky nav. Every link resolves to a real page.
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const links = [
+  { href: '/#work', label: 'Work' },
+  { href: '/log', label: 'Log' },
+  { href: '/uses', label: 'Uses' },
+  { href: '/now', label: 'Now' },
+  { href: '/#contact', label: 'Contact' },
+];
+const isCurrent = (href: string) => {
+  const base = href.split('#')[0].replace(/\/$/, '') || '/';
+  return base !== '/' && base === path;
+};
+---
+
+<nav class="nav" aria-label="Primary">
+  <a href="/" class="wordmark" aria-label="Robert Kiss — home">
+    &lt;<span class="b">RobertKiss</span> /&gt;
+  </a>
+  <div class="nav-links">
+    {
+      links.map((l) => (
+        <a href={l.href} aria-current={isCurrent(l.href) ? 'page' : undefined}>
+          {l.label}
+        </a>
+      ))
+    }
+  </div>
+</nav>

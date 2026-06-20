@@ -1,50 +1,38 @@
-# 👨‍💻 Robert Kiss | Creative Developer
+# &lt;RobertKiss /&gt; — solo software studio
 
-> **// System check: All core functionalities online.**
+> **// all systems online**
 
-I build elegant, functional, and user-centric digital experiences. I thrive at the intersection of **product, growth, strategy, and code**, bringing 5+ years of business experience to the technical world.
+The personal site of **Robert Kiss** — a one-person software studio. I design,
+build, and run software products end to end. The homepage features a **live
+fleet** of those products: status, version, and last-shipped pulled from GitHub
+**at build time** (never from the browser, never with a client-side token).
 
----
+**Stack:** [Astro](https://astro.build) (static output, zero JS by default).
+Content pages are Markdown. See [DECISIONS.md](DECISIONS.md) for the why.
 
-## 🚀 Featured Projects
+## Quickstart
 
-### [NetworthOS (FIRETrackr)](https://github.com/Nagoyashi)
-A modern, privacy-first personal finance and investment tracking web app. It helps users understand their financial health and visualize their path to **Financial Independence (FIRE)**.
+```bash
+npm install
+npm run dev        # http://localhost:4321
+npm run build      # -> dist/
+npm run preview    # serve the build
+npm run check      # type-check
+```
 
-### [Json Visualiser](https://github.com/Nagoyashi/json2viz)
-A lightweight **Python command-line utility** for converting nested JSON or JSONL data into flattened, tabular CSV formats. Great for data inspection and visualization.
+## How the fleet works
 
-### [Autory.io](https://autory.io)
-Making AI accessible to everyone. Deploy custom **AI agents** to extract and transform unstructured data from text, image, and audio sources with 99%+ accuracy.
+- [`src/config/products.ts`](src/config/products.ts) — the **single source of
+  truth**. Hand-maintained: name, status, version, links. Cards link to the
+  deployed site; a repo link shows only where the repo is public.
+- [`src/lib/github.ts`](src/lib/github.ts) — **build-time-only** enrichment.
+  Pulls live versions, releases, and open milestones for any repo it can read;
+  falls back to `products.ts` on any failure, so the fleet always renders.
+- Private-repo data needs the read-only GitHub App (see
+  [DEPLOY.md](DEPLOY.md)); without it, private repos show their fallbacks.
 
----
-
-## 🛠️ Technical Stack
-
-I am well-equipped to lead cross-functional teams in high-growth environments with the following tools:
-
-| Category | Skills |
-| :--- | :--- |
-| **Languages** | C, Python, JavaScript (ES6+) |
-| **Frontend** | React, Vue.js, HTML5, CSS3 (Grid/Flex), Tailwind.css |
-| **Backend** | Node.js, Flask, FastAPI |
-| **Data/DB** | PostgreSQL, SQLite, Pandas |
-| **Design** | UI/UX Design |
-
----
-
-## 📈 About Me
-I have over 2 years of technical development experience coupled with over 5 years in business roles. This hybrid background allows me to build software that isn't just code, but a strategic asset. I love solving complex problems and turning them into simple, beautiful interfaces.
-
----
-
-## 📫 Let's Build Something Amazing
-
-* **LinkedIn:** [/in/robertkiss1998](https://www.linkedin.com/in/robertkiss1998/)
-* **GitHub:** [@Nagoyashi](https://github.com/Nagoyashi)
-* **Email:** [kissrobertm@protonmail.com](mailto:kissrobertm@protonmail.com)
-
----
+**Two hard rules:** no invented metrics or claims anywhere; no secrets in the
+client bundle, ever.
 
 ## Project docs
 
@@ -54,7 +42,7 @@ I have over 2 years of technical development experience coupled with over 5 year
 | [project.md](project.md) | Roadmap & phase-level status |
 | [DECISIONS.md](DECISIONS.md) | Architecture decision log |
 | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | File map & code-placement conventions |
-| [DEPLOY.md](DEPLOY.md) | Deploy runbook (GitHub Pages) |
+| [DEPLOY.md](DEPLOY.md) | Deploy runbook (GitHub Pages via Actions) |
 | [docs/releases/](docs/releases/) | Per-release notes (source of GitHub Releases) |
 
 ---

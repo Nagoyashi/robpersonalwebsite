@@ -1,0 +1,52 @@
+---
+import type { FleetItem } from '../lib/github';
+import StatusPill from './StatusPill.astro';
+import { fmtDate } from '../lib/format';
+
+interface Props {
+  item: FleetItem;
+}
+const { item } = Astro.props;
+const isFlagship = Boolean(item.flagship);
+---
+
+<article class={`card reveal${isFlagship ? ' flagship' : ''}`}>
+  <div class="card-head">
+    <h3 class="card-name">{item.name}</h3>
+    <StatusPill status={item.status} kind={item.kind} />
+  </div>
+  {isFlagship && <p class="flagship-tag">// flagship</p>}
+
+  <p class="card-tagline">{item.tagline}</p>
+
+  <div class="card-meta">
+    {item.version && <span class="version-badge">{item.version}</span>}
+    {
+      item.kind !== 'cli' && (
+        <span>shipped {fmtDate(item.lastShipped)}</span>
+      )
+    }
+  </div>
+
+  <div class="card-links">
+    {
+      item.siteUrl && (
+        <a href={item.siteUrl} target="_blank" rel="noopener">
+          → {item.kind === 'service' ? 'view' : 'visit site'}
+        </a>
+      )
+    }
+    {
+      item.repoUrl && (
+        <a href={item.repoUrl} target="_blank" rel="noopener">
+          → repo
+        </a>
+      )
+    }
+    {
+      !item.siteUrl && !item.repoUrl && (
+        <span class="empty-note">private · in development</span>
+      )
+    }
+  </div>
+</article>
