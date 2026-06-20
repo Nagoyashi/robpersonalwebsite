@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import { fleet } from '../config/products';
+import { recentReleases } from '../lib/github';
+import { fmtDate } from '../lib/format';
+
+// Full release history across the fleet (homepage shows only the latest 5).
+const releases = await recentReleases(fleet, 100);
+---
+
+<Base title="Log — Robert Kiss" description="Release log across Robert Kiss's software fleet.">
+  <section class="section container">
+    <div class="prose">
+      <a href="/" class="back-link">← back</a>
+      <h1>Release log</h1>
+      <p class="updated">Generated from GitHub releases at build time.</p>
+    </div>
+    {
+      releases.length > 0 ? (
+        <ul class="log-list" style="max-width:70ch;margin:0 auto">
+          {releases.map((r) => (
+            <li class="log-row">
+              <span class="date">{fmtDate(r.date)}</span>
+              <span class="repo">{r.product}</span>
+              <a class="tag" href={r.url} target="_blank" rel="noopener">
+                {r.tag}
+              </a>
+              <span class="title">{r.title}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty-note" style="max-width:70ch;margin:0 auto">
+          No public releases to show right now.
+        </p>
+      )
+    }
+  </section>
+</Base>

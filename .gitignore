@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+# build output
+dist/
+# astro generated types & cache
+.astro/
+# env / secrets — never commit
+.env
+.env.*
+!.env.example
+# os / editor
+.DS_Store
+*.log

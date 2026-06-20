@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import { getEntry, render } from 'astro:content';
+
+const entry = await getEntry('pages', 'uses');
+if (!entry) throw new Error('Missing src/content/uses.md');
+const { Content } = await render(entry);
+---
+
+<Base title="Uses — Robert Kiss" description="The tools and stack Robert Kiss builds with.">
+  <section class="section container">
+    <div class="prose">
+      <a href="/" class="back-link">← back</a>
+      <h1>{entry.data.title}</h1>
+      {entry.data.updated && <p class="updated">updated {entry.data.updated}</p>}
+      <Content />
+    </div>
+  </section>
+</Base>

@@ -1,26 +1,33 @@
 # CLAUDE.md — operating manual for this repo
 
-`robpersonalwebsite` — Robert Kiss's personal portfolio site. A single
-hand-written static page (`index.html` + `style.css`). No build step, no
-dependencies, no test suite.
+`robpersonalwebsite` — Robert Kiss's solo software-studio homepage. An
+**Astro** static site (see [DECISIONS.md](DECISIONS.md) ADR-005) with a
+build-time GitHub data layer. Output is static HTML; no test suite.
 
 ## Hard invariants / RULES (non-negotiable)
 
-- **Stack / dependency contract.** This is plain static HTML5 + CSS3, served
-  as-is. There is **no build step and no runtime dependency**. Do not introduce
-  a framework, bundler, package manager, or `node_modules` without a written
-  entry in [DECISIONS.md](DECISIONS.md) explaining why. Keep it openable by
-  double-clicking `index.html`. [CONFIRM]
+- **Stack / dependency contract.** Astro, building to static HTML. **Zero
+  client JS by default** — add an interactive island only when genuinely needed.
+  Keep dependencies lean; a new framework/major dependency needs a written entry
+  in [DECISIONS.md](DECISIONS.md). Styling stays in the single
+  `src/styles/global.css` unless an ADR says otherwise.
+- **No client-side data fetching.** All external/GitHub data is fetched at
+  **build time** only, in `src/lib/github.ts`. The browser never calls GitHub.
+- **Single source of truth for the fleet.** Product facts live only in
+  `src/config/products.ts`; `github.ts` enriches and must always fall back to
+  it so the build never breaks. **No invented metrics, counts, or claims** —
+  unknowns render as marked placeholders, never fabricated.
+- **No secrets in the client bundle, ever.** Tokens (the read-only GitHub App
+  installation token) are build-only, read as a non-`PUBLIC_` env var. No
+  `.env` / keys / tokens are committed. App ID + key live only as CI secrets.
 - **CI gate.** The `validate` check (`.github/workflows/ci.yml`) must pass
-  before any PR merges to `main`. It validates HTML structure and that every
-  local asset/link reference resolves. Do not merge red. [CONFIRM once branch
+  before any PR merges to `main`. It runs `astro check` + `astro build` (a green
+  build is the structural guarantee). Do not merge red. [CONFIRM once branch
   protection is enabled — see Release ritual]
-- **Security posture.** Public repo; contains no secrets and must stay that way.
-  No `.env` / API keys / tokens belong in this repo. External links only.
 - **No direct commits to `main`.** All changes land via short-lived branch → PR.
-- **Performance budget.** Page must stay lightweight (single HTML + single CSS,
-  no heavy assets). Adding large media or third-party scripts needs a
-  DECISIONS.md entry. [CONFIRM]
+- **Performance budget.** Stay lightweight: static output, zero JS by default,
+  no heavy assets. Adding large media or third-party scripts needs a
+  DECISIONS.md entry.
 
 ## This repo's Project board
 

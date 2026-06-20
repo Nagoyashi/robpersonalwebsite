@@ -1,0 +1,19 @@
+{
+  "name": "robpersonalwebsite",
+  "version": "0.2.0",
+  "type": "module",
+  "private": true,
+  "description": "Robert Kiss — solo software studio homepage. Astro, build-time GitHub data layer.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^6.4.8",
+    "typescript": "^6.0.3"
+  }
+}

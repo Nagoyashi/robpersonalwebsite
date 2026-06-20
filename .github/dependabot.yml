@@ -1,9 +1,8 @@
 version: 2
 
-# No package manifests exist in this repo (it is hand-written HTML/CSS with no
-# build step), so the only ecosystem to keep current is the GitHub Actions used
-# by the workflows in .github/workflows/. Add a new block here if a manifest
-# (package.json, requirements.txt, etc.) is ever introduced.
+# The site is an Astro project (ADR-005), so we keep two ecosystems current:
+# the GitHub Actions in .github/workflows/, and the npm dependencies in
+# package.json.
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -14,6 +13,19 @@ updates:
       prefix: "chore"
     groups:
       actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "main"
+    commit-message:
+      prefix: "chore"
+    groups:
+      npm-minor-patch:
         update-types:
           - "minor"
           - "patch"
