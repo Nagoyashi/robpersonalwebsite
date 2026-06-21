@@ -4,6 +4,8 @@ node_modules/
 dist/
 # astro generated types & cache
 .astro/
+# vercel adapter build output (.vercel/output) + local CLI state
+.vercel/
 # env / secrets — never commit
 .env
 .env.*
