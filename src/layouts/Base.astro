@@ -1,4 +1,12 @@
 ---
+// Self-hosted fonts (no third-party CDN — no visitor-IP leak; see ADR-014).
+// Exact weights only: JetBrains Mono 400/500/700, Poppins 300/400/600.
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+import '@fontsource/jetbrains-mono/700.css';
+import '@fontsource/poppins/300.css';
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/600.css';
 import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
@@ -40,13 +48,7 @@ const ogImage = new URL('/og.png', Astro.site).href;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
-    <!-- Fonts actually used: JetBrains Mono (terminal) + Poppins (prose) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Poppins:wght@300;400;600&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Fonts are self-hosted via @fontsource (imported above) — no CDN. -->
 
     <script is:inline>
       document.documentElement.classList.add('js');

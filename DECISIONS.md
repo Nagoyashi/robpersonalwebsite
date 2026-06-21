@@ -210,3 +210,23 @@ from the codebase rather than told to me — please verify.
   entanglement. Every metric must trace to a real source — no fabricated numbers.
 - **Revisit when.** A real ETL/observability platform would do better than
   hand-rolled connectors.
+
+## ADR-014 — Self-host fonts (drop the Google Fonts CDN)
+
+- **Status.** Accepted, implemented (v0.3.0).
+- **Context.** `Base.astro` loaded JetBrains Mono + Poppins from Google's CDN
+  (`fonts.googleapis.com`/`gstatic.com`). That transmits every visitor's IP to
+  Google on each page load — which a German court (LG München, 2022) ruled a
+  GDPR violation absent consent. The site is going live under `kissrobert.com`
+  and needs an imprint/privacy baseline, so a third-party request that leaks IPs
+  is the wrong default.
+- **Decision.** Self-host the exact weights via **`@fontsource`**
+  (`@fontsource/jetbrains-mono` 400/500/700, `@fontsource/poppins` 300/400/600).
+  Fonts are bundled and served from our own origin; **no client request ever
+  goes to Google**. The Google `<link>`/`preconnect` are removed.
+- **Rationale.** Removes the IP leak (privacy), eliminates render-blocking
+  third-party requests (perf — *better* for the budget, not worse), and keeps
+  the "no client-side third-party" spirit. `@fontsource` is a static-asset
+  dependency, not a framework — within the lean-dependency contract.
+- **Revisit when.** Astro's first-party Fonts API leaves experimental, at which
+  point it could replace `@fontsource` with zero dependencies.
