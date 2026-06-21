@@ -1,5 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
+import ComingSoon from '../components/ComingSoon.astro';
+import { COMING_SOON } from '../config/site';
 import FleetCard from '../components/FleetCard.astro';
 import { fleet } from '../config/products';
 import { getSiteData } from '../lib/github';
@@ -7,16 +9,20 @@ import { fmtDate } from '../lib/format';
 import { getEntry } from 'astro:content';
 
 // --- Build-time GitHub data (graceful: falls back to products.ts on failure) ---
-const { fleet: fleetItems, releases, shipping } = await getSiteData(fleet);
+// Skipped entirely under construction mode — no GitHub calls to render a placeholder.
+const { fleet: fleetItems, releases, shipping } = COMING_SOON
+  ? { fleet: [], releases: [], shipping: [] }
+  : await getSiteData(fleet);
 
 // flagship first, then the rest in config order
 const ordered = [...fleetItems].sort((a, b) => Number(Boolean(b.flagship)) - Number(Boolean(a.flagship)));
 
 // --- Now strip: hand-written headline + auto-derived "currently shipping" ---
-const now = await getEntry('pages', 'now');
+const now = COMING_SOON ? null : await getEntry('pages', 'now');
 const nowHeadline = now?.data.headline ?? '';
 ---
 
+{COMING_SOON ? <ComingSoon /> : (
 <Base title="Robert Kiss — Builder & Entrepreneur">
   <!-- Hero -->
   <section class="hero container">
@@ -106,3 +112,4 @@ const nowHeadline = now?.data.headline ?? '';
     </p>
   </section>
 </Base>
+)}

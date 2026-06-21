@@ -1,6 +1,9 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getEntry, render } from 'astro:content';
+import { COMING_SOON } from '../config/site';
+
+if (COMING_SOON) return Astro.redirect('/');
 
 const entry = await getEntry('pages', 'now');
 if (!entry) throw new Error('Missing src/content/now.md');
