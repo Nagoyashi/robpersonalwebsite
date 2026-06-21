@@ -1,0 +1,87 @@
+---
+// Full-page "under construction" placeholder shown while COMING_SOON is true
+// (see src/config/site.ts). Self-contained on purpose: it does NOT use Base, so
+// it carries its own minimal <head> — `noindex`, no third-party font CDN (no
+// visitor-IP leak on the public page), and no OG/analytics surface to disclose.
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robert Kiss — Coming soon</title>
+    <meta name="description" content="A one-person software studio. New site shipping soon." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="canonical" href="https://kissrobert.com/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- System fonts only here — Google Fonts CDN is deliberately not loaded. -->
+  </head>
+  <body>
+    <div class="fx" aria-hidden="true"></div>
+    <main class="cs-wrap">
+      <p class="cs-systems"><span class="cs-dot"></span>// building</p>
+      <h1 class="cs-title">Robert Kiss</h1>
+      <p class="cs-sub">
+        A one-person software studio. The new site is being built —
+        <span class="cs-accent">shipping soon.</span>
+      </p>
+      <p class="cs-meta">[ kissrobert.com — under construction ]</p>
+    </main>
+
+    <style>
+      /* Tokens (--mono, --green, --accent, …) come from global.css :root. */
+      body {
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+      }
+      .cs-wrap {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        padding: 2rem;
+        max-width: 42rem;
+      }
+      .cs-systems {
+        font-family: var(--mono);
+        color: var(--green);
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+        margin: 0 0 1.5rem;
+      }
+      .cs-dot {
+        display: inline-block;
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: var(--green);
+        margin-right: 0.5rem;
+        box-shadow: 0 0 8px var(--green);
+      }
+      .cs-title {
+        font-family: var(--mono);
+        font-size: clamp(2.4rem, 8vw, 4rem);
+        color: var(--text-strong);
+        letter-spacing: -0.02em;
+        margin: 0 0 1rem;
+      }
+      .cs-sub {
+        font-family: var(--sans);
+        font-size: clamp(1rem, 3.5vw, 1.25rem);
+        color: var(--text);
+        line-height: 1.6;
+        margin: 0 0 2rem;
+      }
+      .cs-accent {
+        color: var(--accent);
+      }
+      .cs-meta {
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        color: var(--dim);
+      }
+    </style>
+  </body>
+</html>

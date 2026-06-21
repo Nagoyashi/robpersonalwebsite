@@ -3,6 +3,9 @@ import Base from '../layouts/Base.astro';
 import { fleet } from '../config/products';
 import { recentReleases } from '../lib/github';
 import { fmtDate } from '../lib/format';
+import { COMING_SOON } from '../config/site';
+
+if (COMING_SOON) return Astro.redirect('/');
 
 // Full release history across the fleet (homepage shows only the latest 5).
 const releases = await recentReleases(fleet, 100);
