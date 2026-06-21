@@ -531,6 +531,18 @@ a:hover {
   font-size: 0.8rem;
   color: var(--dim);
 }
+.footer .legal-links {
+  margin-top: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.footer .legal-links a {
+  color: var(--dim);
+  text-decoration: none;
+}
+.footer .legal-links a:hover {
+  color: var(--accent);
+}
 
 /* ---- Prose (content pages) ---- */
 .prose {
