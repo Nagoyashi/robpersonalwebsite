@@ -238,6 +238,8 @@ a:hover {
 .hero {
   padding-block: 5.5rem 4rem;
 }
+/* Status badge. Currently a static "all systems online" flourish; to be wired
+   to a real per-fleet uptime signal via the control center (see #41). */
 .hero .systems {
   font-family: var(--mono);
   font-size: 0.85rem;
@@ -313,7 +315,9 @@ a:hover {
 /* ---- Fleet ---- */
 .fleet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  /* 2-up on desktop (within the 1080px container), 1-up on mobile. Keeps the
+     fleet even — no orphaned last card stranding empty space beside it. */
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 22px;
 }
 .fleet-grid .flagship {
