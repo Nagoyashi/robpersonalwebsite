@@ -238,6 +238,29 @@ a:hover {
 .hero {
   padding-block: 5.5rem 4rem;
 }
+/* Status badge. Currently a static "all systems online" flourish; to be wired
+   to a real per-fleet uptime signal via the control center (see #41). */
+.hero .systems {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--green);
+  margin-bottom: 1.2rem;
+}
+.hero .systems .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  margin-right: 0.5rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
 .hero h1 {
   font-size: clamp(2.2rem, 6vw, 3.6rem);
   font-weight: 600;
