@@ -1,0 +1,3 @@
+# Supabase CLI config. `project_id` is the linked remote project ref
+# (kissrobert-control-center). Run `supabase db push` to apply migrations/.
+project_id = "xncptjevqlsfgzxkyxrp"
