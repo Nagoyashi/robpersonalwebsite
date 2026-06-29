@@ -18,7 +18,7 @@ import '../styles/global.css';
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <!-- System fonts only here — Google Fonts CDN is deliberately not loaded. -->
   </head>
-  <body>
+  <body class="cs-page">
     <div class="fx" aria-hidden="true"></div>
     <main class="cs-wrap">
       <p class="cs-systems"><span class="cs-dot"></span>// building</p>
@@ -35,7 +35,11 @@ import '../styles/global.css';
 
     <style>
       /* Tokens (--mono, --green, --accent, …) come from global.css :root. */
-      body {
+      /* Scoped to .cs-page so this never leaks onto the real site. Astro bundles
+         this component's CSS into index even when COMING_SOON is false; a bare
+         `body { display:grid; place-items:center }` here would center the whole
+         homepage (and its nav). Keep the centering on the coming-soon body only. */
+      .cs-page {
         min-height: 100svh;
         display: grid;
         place-items: center;
