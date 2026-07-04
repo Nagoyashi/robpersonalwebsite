@@ -50,6 +50,9 @@ export interface Product {
   manualOnly?: boolean;
   /** set false to exclude from the public fleet (e.g. internal tooling) */
   include?: boolean;
+  /** control-center only: mark as stealth (◈ badge in /admin). Never affects
+   *  the public plane; public visibility is governed by `include`. */
+  stealth?: boolean;
 }
 
 export const products: Product[] = [
@@ -78,6 +81,7 @@ export const products: Product[] = [
     fallbackVersion: null, // no releases cut yet
     fallbackDate: null,
     include: false, // stealth during private beta — hidden from the public fleet
+    stealth: true, // control-center: ◈ stealth
   },
   {
     slug: 'cutecumber',
@@ -101,6 +105,7 @@ export const products: Product[] = [
     repo: { owner: 'Nagoyashi', name: 'pandavo', public: false },
     fallbackVersion: null,
     fallbackDate: null,
+    stealth: true, // control-center: ◈ stealth
   },
   {
     slug: 'json2viz',
@@ -135,6 +140,7 @@ export const products: Product[] = [
     siteUrl: null,
     repo: { owner: 'Nagoyashi', name: 'vound', public: false },
     include: false, // internal tooling — excluded from the public fleet for now
+    stealth: true, // control-center: ◈ stealth
   },
 ];
 
