@@ -64,7 +64,7 @@ export const products: Product[] = [
     status: 'live',
     kind: 'app',
     siteUrl: 'https://www.spreadsheetmillionaire.com',
-    repo: { owner: 'Nagoyashi', name: 'spreadsheet-millionaire', public: true },
+    repo: { owner: 'Nagoyashi', name: 'spreadsheet-millionaire', public: false }, // private repo — no public repo link; live data needs the App token
     flagship: true,
     fallbackVersion: 'v0.9.0',
     fallbackDate: '2026-06-20',
@@ -105,6 +105,7 @@ export const products: Product[] = [
     repo: { owner: 'Nagoyashi', name: 'pandavo', public: false },
     fallbackVersion: null,
     fallbackDate: null,
+    include: false, // stealth — pulled from the public fleet (handoff non-negotiable)
     stealth: true, // control-center: ◈ stealth
   },
   {
