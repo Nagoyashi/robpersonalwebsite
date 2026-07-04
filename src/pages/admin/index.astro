@@ -1,0 +1,14 @@
+---
+export const prerender = false; // private plane — server-rendered (ADR-009)
+import AdminShell from '../../layouts/AdminShell.astro';
+import PageHeader from '../../components/admin/PageHeader.astro';
+---
+
+<AdminShell page="overview" title="rob//ctrl — overview">
+  <div style="max-width:1200px;margin:0 auto">
+    <PageHeader name="overview" subtitle="fleet status · release cycles · what's next" />
+    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
+      — shell scaffold; fleet + release-cycle content lands next (#26) —
+    </p>
+  </div>
+</AdminShell>

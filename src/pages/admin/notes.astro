@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+import AdminShell from '../../layouts/AdminShell.astro';
+import PageHeader from '../../components/admin/PageHeader.astro';
+---
+
+<AdminShell page="notes" title="rob//ctrl — notes">
+  <div style="max-width:1280px;margin:0 auto">
+    <PageHeader name="notes" subtitle="quick capture · project notes · ideas" />
+    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
+      — shell scaffold; the notes editor lands in Phase 2 —
+    </p>
+  </div>
+</AdminShell>

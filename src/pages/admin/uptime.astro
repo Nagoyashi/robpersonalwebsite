@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+import AdminShell from '../../layouts/AdminShell.astro';
+import PageHeader from '../../components/admin/PageHeader.astro';
+---
+
+<AdminShell page="uptime" title="rob//ctrl — uptime">
+  <div style="max-width:1200px;margin:0 auto">
+    <PageHeader name="uptime" subtitle="endpoint health · response times · incident log" />
+    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
+      — shell scaffold; monitors + incidents land in Phase 3 —
+    </p>
+  </div>
+</AdminShell>

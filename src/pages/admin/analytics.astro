@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+import AdminShell from '../../layouts/AdminShell.astro';
+import PageHeader from '../../components/admin/PageHeader.astro';
+---
+
+<AdminShell page="analytics" title="rob//ctrl — analytics">
+  <div style="max-width:1200px;margin:0 auto">
+    <PageHeader name="analytics" subtitle="traffic across the fleet · last 30 days" />
+    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
+      — shell scaffold; KPIs + charts land in Phase 4 —
+    </p>
+  </div>
+</AdminShell>

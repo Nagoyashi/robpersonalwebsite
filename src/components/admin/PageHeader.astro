@@ -1,0 +1,18 @@
+---
+// The `$ pagename` + subtitle header used at the top of every control-center
+// page (DESIGN_SPEC §1 "Page header pattern").
+interface Props {
+  name: string;
+  subtitle: string;
+}
+const { name, subtitle } = Astro.props;
+---
+
+<div style="margin-bottom:26px">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500;color:#f0f3f8">
+    <span style="color:#ff2e97;text-shadow:0 0 8px rgba(255,46,151,.5);margin-right:8px">$</span>{name}
+  </div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681;margin-top:4px">
+    {subtitle}
+  </div>
+</div>

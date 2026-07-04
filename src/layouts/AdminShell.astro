@@ -1,0 +1,172 @@
+---
+// AdminShell — private-plane layout for the Life Control Center (/admin).
+//
+// Two-plane architecture (ADR-009): the public site stays static; every page
+// that uses this shell sets `export const prerender = false` so /admin renders
+// server-side. Design ground truth is the handoff prototype (Control
+// Center.dc.html) — dark only, exact palette, literal values copied over.
+//
+// noindex + not linked from the public site. Auth gate (#24) wraps this next.
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+import '@fontsource/jetbrains-mono/700.css';
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import Sidebar from '../components/admin/Sidebar.astro';
+
+interface Props {
+  /** active nav key: overview | uptime | ideation | analytics | marketing | notes */
+  page: string;
+  title?: string;
+}
+const { page, title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title ?? 'rob//ctrl — control center'}</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style is:global>
+      /* Scoped to .adm so nothing leaks to the public plane (see the ComingSoon
+         leak lesson). Tokens are inlined literally in markup to match the
+         prototype; this block is just the base + fixed background FX. */
+      .adm {
+        margin: 0;
+        background: #03040a;
+        color: #c9d1d9;
+        font-family: 'Poppins', system-ui, sans-serif;
+        line-height: 1.6;
+        overflow-x: hidden;
+      }
+      .adm * {
+        box-sizing: border-box;
+      }
+      .adm textarea,
+      .adm input,
+      .adm button,
+      .adm select {
+        font-family: inherit;
+      }
+      .adm button {
+        -webkit-tap-highlight-color: transparent;
+      }
+      .adm ::selection {
+        background: rgba(0, 224, 255, 0.25);
+      }
+      .adm ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      .adm ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.09);
+        border-radius: 6px;
+      }
+      .adm ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .adm ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      @keyframes admGridPan {
+        from {
+          background-position: 0 0, 0 0;
+        }
+        to {
+          background-position: 0 -46px, 46px 0;
+        }
+      }
+      @keyframes admDrift1 {
+        from {
+          transform: translate(0, 0) scale(1);
+        }
+        to {
+          transform: translate(16vw, 14vh) scale(1.2);
+        }
+      }
+      @keyframes admDrift2 {
+        from {
+          transform: translate(0, 0) scale(1);
+        }
+        to {
+          transform: translate(-14vw, -12vh) scale(1.15);
+        }
+      }
+      @keyframes admPulseDot {
+        50% {
+          opacity: 0.3;
+        }
+      }
+      /* Sidebar collapse is a single class on the shell root; both asides are
+         rendered and CSS shows one. */
+      .adm-shell .adm-side-collapsed {
+        display: none;
+      }
+      .adm-shell.is-collapsed .adm-side-expanded {
+        display: none;
+      }
+      .adm-shell.is-collapsed .adm-side-collapsed {
+        display: flex;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .adm *,
+        .adm *::before,
+        .adm *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="adm">
+    <!-- Background FX (fixed, behind everything) -->
+    <div
+      aria-hidden="true"
+      style="position:fixed;inset:-2px;z-index:-3;pointer-events:none;background-image:linear-gradient(rgba(0,224,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,46,151,.04) 1px,transparent 1px);background-size:46px 46px,46px 46px;animation:admGridPan 16s linear infinite"
+    >
+    </div>
+    <div aria-hidden="true" style="position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden">
+      <div
+        style="position:absolute;width:55vw;height:55vw;top:-16%;left:-12%;border-radius:50%;filter:blur(130px);background:radial-gradient(circle,rgba(0,224,255,.22),transparent 70%);animation:admDrift1 26s ease-in-out infinite alternate"
+      >
+      </div>
+      <div
+        style="position:absolute;width:50vw;height:50vw;bottom:-20%;right:-14%;border-radius:50%;filter:blur(130px);background:radial-gradient(circle,rgba(255,46,151,.18),transparent 70%);animation:admDrift2 32s ease-in-out infinite alternate"
+      >
+      </div>
+    </div>
+    <div
+      aria-hidden="true"
+      style="position:fixed;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.14) 3px);opacity:.45"
+    >
+    </div>
+
+    <div class="adm-shell" style="position:relative;z-index:1;display:flex;min-height:100vh">
+      <Sidebar page={page} />
+      <main style="flex:1;min-width:0;padding:34px 40px 64px">
+        <slot />
+      </main>
+    </div>
+
+    <script is:inline>
+      // Collapse state persists across pages (localStorage). Applied pre-paint
+      // via the class already set below to avoid a flash.
+      (function () {
+        const shell = document.querySelector('.adm-shell');
+        if (!shell) return;
+        const KEY = 'lcc_side_collapsed';
+        if (localStorage.getItem(KEY) === '1') shell.classList.add('is-collapsed');
+        document.querySelectorAll('[data-side-toggle]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const collapsed = shell.classList.toggle('is-collapsed');
+            localStorage.setItem(KEY, collapsed ? '1' : '0');
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
