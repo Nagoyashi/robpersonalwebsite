@@ -1,0 +1,127 @@
+---
+export const prerender = false; // must run server-side (reads ?error, sets no cache)
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
+import '@fontsource/jetbrains-mono/700.css';
+import '@fontsource/poppins/400.css';
+import { authConfigured } from '../../lib/ctrl/auth';
+
+const errors: Record<string, string> = {
+  denied: 'That GitHub account is not on the allowlist.',
+  oauth: 'Could not start GitHub sign-in. Check the provider config.',
+  exchange: 'Sign-in failed on callback. Try again.',
+  nocode: 'Sign-in was cancelled.',
+};
+const err = Astro.url.searchParams.get('error');
+const errMsg = err ? (errors[err] ?? 'Sign-in failed.') : null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rob//ctrl — sign in</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="logo">rob<span class="s">//</span><span class="c">ctrl</span></div>
+      <div class="sub">control center</div>
+
+      {errMsg && <div class="err">{errMsg}</div>}
+
+      {
+        authConfigured ? (
+          <a class="btn" href="/admin/auth/signin">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5C5.4.5 0 5.9 0 12.6c0 5.3 3.4 9.8 8.2 11.4.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6C20.6 22.4 24 17.9 24 12.6 24 5.9 18.6.5 12 .5Z" />
+            </svg>
+            sign in with GitHub
+          </a>
+        ) : (
+          <div class="err">
+            Auth is not configured yet — set SUPABASE_URL, SUPABASE_ANON_KEY, and ADMIN_GITHUB_LOGIN,
+            and enable the GitHub provider in Supabase.
+          </div>
+        )
+      }
+
+      <div class="note">private · single operator</div>
+    </div>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: #03040a;
+        color: #c9d1d9;
+        font-family: 'Poppins', system-ui, sans-serif;
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+      }
+      .wrap {
+        text-align: center;
+        padding: 2rem;
+        max-width: 24rem;
+      }
+      .logo {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 26px;
+        color: #f0f3f8;
+        letter-spacing: -0.4px;
+      }
+      .logo .s {
+        color: #6e7681;
+      }
+      .logo .c {
+        color: #00e0ff;
+      }
+      .sub {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #6e7681;
+        margin: 6px 0 28px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 20px;
+        border-radius: 9px;
+        background: #00e0ff;
+        color: #03040a;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 14px;
+        text-decoration: none;
+        transition: box-shadow 0.15s ease;
+      }
+      .btn:hover {
+        box-shadow: 0 0 18px rgba(0, 224, 255, 0.5);
+      }
+      .err {
+        border: 1px solid rgba(210, 153, 34, 0.4);
+        background: rgba(210, 153, 34, 0.08);
+        color: #d29922;
+        font-size: 12.5px;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 20px;
+      }
+      .note {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10.5px;
+        color: #6e7681;
+        margin-top: 22px;
+      }
+    </style>
+  </body>
+</html>

@@ -82,6 +82,7 @@ const svg = (key: string) =>
       </div>
     </div>
     <button data-side-toggle class="adm-toggle" title="Collapse sidebar" aria-label="Collapse sidebar">«</button>
+    <a href="/admin/auth/signout" class="adm-signout">sign out</a>
   </div>
 </aside>
 
@@ -113,6 +114,7 @@ const svg = (key: string) =>
       ></span>
     </div>
     <button data-side-toggle class="adm-toggle" title="Expand sidebar" aria-label="Expand sidebar">»</button>
+    <a href="/admin/auth/signout" class="adm-signout adm-signout-c" title="Sign out" aria-label="Sign out">⏻</a>
   </div>
 </aside>
 
@@ -159,5 +161,19 @@ const svg = (key: string) =>
   .adm-toggle:hover {
     color: #00e0ff;
     border-color: rgba(0, 224, 255, 0.35);
+  }
+  .adm-signout {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #6e7681;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .adm-signout:hover {
+    color: #ff2e97;
+  }
+  .adm-signout-c {
+    font-size: 15px;
   }
 </style>
