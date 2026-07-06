@@ -69,3 +69,80 @@ export async function deleteNote(id: string): Promise<boolean> {
   const { error } = await c.from('notes').delete().eq('id', id);
   return !error;
 }
+
+// ---------------------------------------------------------------------------
+// Marketing pipeline
+// ---------------------------------------------------------------------------
+export type PipelineStatus = 'idea' | 'draft' | 'scheduled' | 'published';
+export type Channel = 'X' | 'LinkedIn' | 'Reddit' | 'Blog' | 'Email' | 'PH';
+
+export interface MarketingItem {
+  id: string;
+  title: string;
+  channel: Channel;
+  project: string | null;
+  status: PipelineStatus;
+  scheduled_for: string | null;
+}
+export interface SeoArticle {
+  id: string;
+  title: string;
+  keyword: string;
+  project: string | null;
+  words: number | null;
+  status: PipelineStatus;
+  url: string | null;
+}
+
+const MK_COLS = 'id,title,channel,project,status,scheduled_for';
+const SEO_COLS = 'id,title,keyword,project,words,status,url';
+
+export async function listMarketing(): Promise<MarketingItem[]> {
+  const c = db();
+  if (!c) return [];
+  const { data } = await c.from('marketing_items').select(MK_COLS).order('updated_at', { ascending: false });
+  return (data ?? []) as MarketingItem[];
+}
+export async function createMarketing(row: Partial<MarketingItem>): Promise<MarketingItem | null> {
+  const c = db();
+  if (!c) return null;
+  const { data } = await c.from('marketing_items').insert(row).select(MK_COLS).single();
+  return (data as MarketingItem) ?? null;
+}
+export async function updateMarketing(id: string, patch: Partial<MarketingItem>): Promise<boolean> {
+  const c = db();
+  if (!c) return false;
+  const { error } = await c.from('marketing_items').update(patch).eq('id', id);
+  return !error;
+}
+export async function deleteMarketing(id: string): Promise<boolean> {
+  const c = db();
+  if (!c) return false;
+  const { error } = await c.from('marketing_items').delete().eq('id', id);
+  return !error;
+}
+
+export async function listSeo(): Promise<SeoArticle[]> {
+  const c = db();
+  if (!c) return [];
+  const { data } = await c.from('seo_articles').select(SEO_COLS).order('updated_at', { ascending: false });
+  return (data ?? []) as SeoArticle[];
+}
+export async function createSeo(row: Partial<SeoArticle>): Promise<SeoArticle | null> {
+  const c = db();
+  if (!c) return null;
+  const { data } = await c.from('seo_articles').insert(row).select(SEO_COLS).single();
+  return (data as SeoArticle) ?? null;
+}
+export async function updateSeo(id: string, patch: Partial<SeoArticle>): Promise<boolean> {
+  const c = db();
+  if (!c) return false;
+  const { error } = await c.from('seo_articles').update(patch).eq('id', id);
+  return !error;
+}
+export async function deleteSeo(id: string): Promise<boolean> {
+  const c = db();
+  if (!c) return false;
+  const { error } = await c.from('seo_articles').delete().eq('id', id);
+  return !error;
+}
