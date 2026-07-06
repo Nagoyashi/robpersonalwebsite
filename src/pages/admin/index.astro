@@ -1,0 +1,197 @@
+---
+export const prerender = false; // private plane — server-rendered (ADR-009)
+import AdminShell from '../../layouts/AdminShell.astro';
+import PageHeader from '../../components/admin/PageHeader.astro';
+import { getPills, getProjectDetail, defaultSlug } from '../../lib/ctrl/overview';
+
+const selected = Astro.url.searchParams.get('p') || defaultSlug();
+const pills = getPills(selected);
+const cur = await getProjectDetail(selected);
+---
+
+<AdminShell page="overview" title="rob//ctrl — overview">
+  <div style="max-width:1200px;margin:0 auto">
+    <PageHeader name="overview" subtitle="fleet status · release cycles · what's next" />
+
+    <!-- Project selector pills -->
+    <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:26px">
+      {
+        pills.map((p) => (
+          <a href={`/admin?p=${p.slug}`} class:list={['ov-pill', { active: p.active }]}>
+            <span
+              style={`width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${p.dot};box-shadow:0 0 7px ${p.dot}`}
+            />
+            <span>{p.name}</span>
+          </a>
+        ))
+      }
+    </div>
+
+    <!-- Detail stack -->
+    <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <!-- 1 — Hero card -->
+      <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div style="min-width:0">
+            <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;color:#00e0ff">{cur.name}</span>
+              <span
+                style={`font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.5px;padding:3px 9px;border-radius:5px;color:${cur.statusColor};border:1px solid ${cur.statusColor};background:${cur.statusBg}`}
+              >
+                ● {cur.statusLabel}
+              </span>
+              {
+                cur.stealth && (
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 9px;border-radius:5px;color:#b07cff;border:1px solid rgba(176,124,255,.4);background:rgba(176,124,255,.08)">
+                    ◈ STEALTH
+                  </span>
+                )
+              }
+            </div>
+            <div style="color:#8b949e;font-size:13.5px;margin-top:10px;max-width:60ch">{cur.tagline}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#f0f3f8">{cur.version}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681;margin-top:2px">{cur.lastShipped}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:12px">
+          <span style="color:#6e7681">{cur.kindLabel}</span>
+          {
+            cur.siteUrl && (
+              <a href={cur.siteUrl} target="_blank" rel="noopener" style="color:#00e0ff;text-decoration:none">
+                ↗ {cur.siteHost}
+              </a>
+            )
+          }
+          {cur.repoLabel && <span style="color:#6e7681">⎇ {cur.repoLabel}</span>}
+        </div>
+      </div>
+
+      <!-- 2 — Current cycle -->
+      <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-left:3px solid #ff2e97;border-radius:12px;padding:22px 24px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#ff2e97;margin-bottom:10px">
+          current cycle
+        </div>
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <span style="font-size:18px;font-weight:600;color:#f0f3f8">{cur.cycleName}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#00e0ff;padding:2px 8px;border-radius:4px;background:rgba(0,224,255,.1)">
+            {cur.cyclePhase}
+          </span>
+        </div>
+        <div style="color:#8b949e;font-size:13.5px;margin-top:9px;max-width:62ch">{cur.cycleSummary}</div>
+        <div style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6e7681;margin-bottom:6px">
+            <span>{cur.milestoneText}</span>
+            <span style="color:#8b949e">{cur.progressText}</span>
+          </div>
+          <div style="height:8px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden">
+            <div
+              style={`height:100%;border-radius:6px;width:${cur.progress}%;background:linear-gradient(90deg,#00e0ff,#ff2e97);box-shadow:0 0 12px rgba(0,224,255,.4)`}
+            >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 — Done / Upcoming -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#3fb950;margin-bottom:12px">
+            ✓ done this cycle
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            {
+              cur.done.map((d) => (
+                <div style="display:flex;gap:9px;font-size:13px;color:#c9d1d9">
+                  <span style="color:#3fb950;flex-shrink:0">✓</span>
+                  <span>{d}</span>
+                </div>
+              ))
+            }
+            {
+              cur.done.length === 0 && (
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#6e7681">nothing shipped yet</div>
+              )
+            }
+          </div>
+        </div>
+        <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#58a6ff;margin-bottom:12px">
+            → upcoming
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            {
+              cur.upcoming.map((u) => (
+                <div style="display:flex;gap:9px;font-size:13px;color:#c9d1d9">
+                  <span style="color:#58a6ff;flex-shrink:0">→</span>
+                  <span>{u}</span>
+                </div>
+              ))
+            }
+            {
+              cur.upcoming.length === 0 && (
+                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#6e7681">nothing queued</div>
+              )
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 — Recent shipping -->
+      <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#6e7681">
+            recent shipping
+          </div>
+          <div style={`font-family:'JetBrains Mono',monospace;font-size:11px;color:${cur.intakeColor}`}>
+            intake queue: {cur.intakeText}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          {
+            cur.releases.map((r) => (
+              <div style="display:flex;align-items:baseline;gap:14px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-family:'JetBrains Mono',monospace;font-size:12.5px">
+                <span style="color:#00e0ff;font-weight:700;min-width:66px">{r.version}</span>
+                <span style="color:#6e7681;min-width:90px;font-size:11px">{r.when}</span>
+                <span style="color:#c9d1d9;font-family:'Poppins',sans-serif;font-size:13px">{r.title}</span>
+              </div>
+            ))
+          }
+          {
+            cur.releases.length === 0 && (
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#6e7681;padding-top:6px">
+                no tagged releases yet
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminShell>
+
+<style>
+  .ov-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 15px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    text-decoration: none;
+    color: #8b949e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: transparent;
+    transition: all 0.15s ease;
+  }
+  .ov-pill:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  .ov-pill.active {
+    color: #00e0ff;
+    background: rgba(0, 224, 255, 0.08);
+    border-color: rgba(0, 224, 255, 0.45);
+  }
+</style>
