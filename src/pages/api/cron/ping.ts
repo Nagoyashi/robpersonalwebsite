@@ -1,9 +1,10 @@
 /**
  * /api/cron/ping — the uptime pinger (Phase 3).
  *
- * Called by Vercel Cron (see vercel.json) every 5 min. NOT under /admin, so the
- * OAuth middleware doesn't gate it — instead it's protected by CRON_SECRET
- * (Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` when that env is set).
+ * Called every ~5 min by a scheduled GitHub Action (.github/workflows/uptime.yml)
+ * — free and plan-independent, vs Vercel Cron which needs Pro for sub-daily runs.
+ * NOT under /admin, so the OAuth middleware doesn't gate it — instead it's
+ * protected by CRON_SECRET (the Action sends `Authorization: Bearer <CRON_SECRET>`).
  * Pings each monitored endpoint, records a check, and opens/closes incidents.
  */
 export const prerender = false;

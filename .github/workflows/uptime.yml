@@ -1,0 +1,35 @@
+name: uptime-ping
+
+# Drives the control-center uptime pinger (Phase 3). A scheduled GitHub Action
+# rather than Vercel Cron — free, runs every ~5 min on any Vercel plan, and the
+# handoff lists it as a valid option. It just hits the (secret-protected)
+# /api/cron/ping endpoint; the endpoint does the pinging + records checks.
+#
+# Provisioning:
+#   - repo variable  CTRL_PING_URL  = deployed origin (e.g. https://kissrobert.com)
+#   - repo secret    CRON_SECRET    = same value set as a Vercel env var
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+# Don't pile up runs if one is slow.
+concurrency:
+  group: uptime-ping
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the uptime endpoint
+        env:
+          URL: ${{ vars.CTRL_PING_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "CTRL_PING_URL (var) and CRON_SECRET (secret) must be set."; exit 1
+          fi
+          curl -fsS -X GET "$URL/api/cron/ping" \
+            -H "Authorization: Bearer $SECRET" \
+            -w "\nping: %{http_code}\n"
