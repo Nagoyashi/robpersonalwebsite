@@ -2,13 +2,165 @@
 export const prerender = false;
 import AdminShell from '../../layouts/AdminShell.astro';
 import PageHeader from '../../components/admin/PageHeader.astro';
+import { listMarketing, listSeo } from '../../lib/ctrl/db';
+import { products } from '../../config/products';
+
+const [items, seo] = await Promise.all([listMarketing(), listSeo()]);
+const projectOpts = products.map((p) => ({ slug: p.slug, name: p.name }));
 ---
 
 <AdminShell page="marketing" title="rob//ctrl — marketing">
   <div style="max-width:1280px;margin:0 auto">
     <PageHeader name="marketing" subtitle="content pipeline · SEO articles · what's shipped & upcoming" />
-    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
-      — shell scaffold; kanban + SEO pipeline land in Phase 2 —
-    </p>
+
+    <!-- Kanban -->
+    <div id="mk-board" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;align-items:start"></div>
+
+    <!-- SEO pipeline -->
+    <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:6px 22px 14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0 4px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#6e7681">SEO pipeline</div>
+        <button id="seo-new" style="font-family:'JetBrains Mono',monospace;font-size:11px;border:1px solid rgba(0,224,255,.3);background:rgba(0,224,255,.1);color:#00e0ff;border-radius:6px;padding:4px 10px;cursor:pointer">+ article</button>
+      </div>
+      <div id="seo-rows"></div>
+    </div>
   </div>
+
+  <script type="application/json" id="mk-data" set:html={JSON.stringify({ items, seo, projects: projectOpts })}></script>
+
+  <script>
+    type Status = 'idea' | 'draft' | 'scheduled' | 'published';
+    type Channel = 'X' | 'LinkedIn' | 'Reddit' | 'Blog' | 'Email' | 'PH';
+    type Item = { id: string; title: string; channel: Channel; project: string | null; status: Status; scheduled_for: string | null };
+    type Seo = { id: string; title: string; keyword: string; project: string | null; words: number | null; status: Status; url: string | null };
+
+    const data = JSON.parse(document.getElementById('mk-data')!.textContent || '{}');
+    let items: Item[] = data.items ?? [];
+    let seo: Seo[] = data.seo ?? [];
+    const projects: { slug: string; name: string }[] = data.projects ?? [];
+
+    const STATUSES: Status[] = ['idea', 'draft', 'scheduled', 'published'];
+    const CHANNELS: Channel[] = ['X', 'LinkedIn', 'Reddit', 'Blog', 'Email', 'PH'];
+    const COLS: { key: Status; label: string; color: string }[] = [
+      { key: 'idea', label: 'IDEA', color: '#6e7681' },
+      { key: 'draft', label: 'DRAFT', color: '#d29922' },
+      { key: 'scheduled', label: 'SCHEDULED', color: '#58a6ff' },
+      { key: 'published', label: 'PUBLISHED', color: '#3fb950' },
+    ];
+    const statusColor = (s: Status) => COLS.find((c) => c.key === s)!.color;
+    const statusBg: Record<Status, string> = {
+      idea: 'rgba(110,118,129,.12)', draft: 'rgba(210,153,34,.12)',
+      scheduled: 'rgba(88,166,255,.12)', published: 'rgba(63,185,80,.12)',
+    };
+    const chan: Record<Channel, { c: string; bg: string }> = {
+      X: { c: '#58a6ff', bg: 'rgba(88,166,255,.14)' },
+      LinkedIn: { c: '#58a6ff', bg: 'rgba(88,166,255,.14)' },
+      Reddit: { c: '#ff2e97', bg: 'rgba(255,46,151,.14)' },
+      PH: { c: '#ff2e97', bg: 'rgba(255,46,151,.14)' },
+      Blog: { c: '#b07cff', bg: 'rgba(176,124,255,.14)' },
+      Email: { c: '#d29922', bg: 'rgba(210,153,34,.14)' },
+    };
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+    const projName = (slug: string | null) => projects.find((p) => p.slug === slug)?.name ?? '';
+    const dateLabel = (d: string | null) => (d ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(d)) : 'no date');
+    const $ = (id: string) => document.getElementById(id)!;
+
+    const optionList = (values: string[], sel: string | null, labels?: Record<string, string>) =>
+      values.map((v) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${labels?.[v] ?? v}</option>`).join('');
+    const ctrlStyle = 'font-family:\'JetBrains Mono\',monospace;font-size:10px;background:#0d1018;color:#8b949e;border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:2px 4px;max-width:100%';
+
+    // --- API ---
+    const api = {
+      patchMk: (id: string, p: Partial<Item>) => fetch(`/admin/api/marketing/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(p) }),
+      delMk: (id: string) => fetch(`/admin/api/marketing/${id}`, { method: 'DELETE' }),
+      newMk: (status: Status) => fetch('/admin/api/marketing', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'New item', channel: 'X', status }) }),
+      patchSeo: (id: string, p: Partial<Seo>) => fetch(`/admin/api/seo/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(p) }),
+      delSeo: (id: string) => fetch(`/admin/api/seo/${id}`, { method: 'DELETE' }),
+      newSeo: () => fetch('/admin/api/seo', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'New article', keyword: 'keyword', status: 'idea' }) }),
+    };
+
+    // --- Kanban ---
+    function renderBoard() {
+      $('mk-board').innerHTML = COLS.map((col) => {
+        const cards = items.filter((i) => i.status === col.key);
+        return `<div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:${col.color}">${col.label}</span>
+            <span style="display:flex;gap:8px;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681">${cards.length}<button data-new-mk="${col.key}" title="Add" style="border:none;background:transparent;color:#00e0ff;cursor:pointer;font-size:15px;line-height:1">+</button></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${cards.map((c) => cardHtml(c, col.color)).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+    function cardHtml(c: Item, color: string) {
+      const ch = chan[c.channel];
+      return `<div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-top:2px solid ${color};border-radius:10px;padding:14px">
+        <div data-mk-title="${c.id}" contenteditable="true" style="font-size:13px;font-weight:500;color:#f0f3f8;line-height:1.45;outline:none">${esc(c.title)}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;color:${ch.c};background:${ch.bg}">${c.channel}</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6e7681">${esc(projName(c.project)) || '—'}</span>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6e7681;margin-top:8px">${dateLabel(c.scheduled_for)}</div>
+        <div style="display:flex;gap:5px;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);flex-wrap:wrap;align-items:center">
+          <select data-mk-status="${c.id}" style="${ctrlStyle}">${optionList(STATUSES, c.status)}</select>
+          <select data-mk-channel="${c.id}" style="${ctrlStyle}">${optionList(CHANNELS, c.channel)}</select>
+          <select data-mk-project="${c.id}" style="${ctrlStyle}"><option value="">project…</option>${optionList(projects.map((p) => p.slug), c.project, Object.fromEntries(projects.map((p) => [p.slug, p.name])))}</select>
+          <input type="date" data-mk-date="${c.id}" value="${c.scheduled_for ?? ''}" style="${ctrlStyle}" />
+          <button data-mk-del="${c.id}" title="Delete" style="border:none;background:transparent;color:#6e7681;cursor:pointer;font-size:13px;margin-left:auto">🗑</button>
+        </div>
+      </div>`;
+    }
+
+    // --- SEO ---
+    function renderSeo() {
+      const el = $('seo-rows');
+      if (!seo.length) { el.innerHTML = '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#6e7681;padding:14px 0">no articles yet</div>'; return; }
+      el.innerHTML = seo.map((a) => `
+        <div style="display:flex;align-items:center;gap:16px;padding:13px 0;border-top:1px solid rgba(255,255,255,.05)">
+          <div style="flex:1;min-width:0">
+            <div data-seo-title="${a.id}" contenteditable="true" style="font-size:13.5px;color:#f0f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;outline:none">${esc(a.title)}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#00e0ff;margin-top:2px">kw: <span data-seo-kw="${a.id}" contenteditable="true" style="outline:none">${esc(a.keyword)}</span></div>
+          </div>
+          <select data-seo-project="${a.id}" style="${ctrlStyle};width:130px;flex-shrink:0"><option value="">project…</option>${optionList(projects.map((p) => p.slug), a.project, Object.fromEntries(projects.map((p) => [p.slug, p.name])))}</select>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681;width:70px;flex-shrink:0;text-align:right">${a.words != null ? (a.words >= 1000 ? (a.words / 1000).toFixed(1) + 'k' : a.words) : '—'}</span>
+          <select data-seo-status="${a.id}" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;padding:3px 6px;border-radius:5px;width:110px;flex-shrink:0;color:${statusColor(a.status)};border:1px solid ${statusColor(a.status)};background:${statusBg[a.status]}">${optionList(STATUSES, a.status, { idea: 'Idea', draft: 'Draft', scheduled: 'Scheduled', published: 'Published' })}</select>
+          <button data-seo-del="${a.id}" title="Delete" style="border:none;background:transparent;color:#6e7681;cursor:pointer;font-size:13px;flex-shrink:0">🗑</button>
+        </div>`).join('');
+    }
+
+    function renderAll() { renderBoard(); renderSeo(); }
+
+    // --- events (delegated) ---
+    document.addEventListener('click', async (e) => {
+      const t = e.target as HTMLElement;
+      const nm = t.closest('[data-new-mk]'); if (nm) { const res = await api.newMk(nm.getAttribute('data-new-mk') as Status); if (res.ok) { items.unshift(await res.json()); renderBoard(); } return; }
+      const dm = t.closest('[data-mk-del]'); if (dm) { const id = dm.getAttribute('data-mk-del')!; items = items.filter((i) => i.id !== id); renderBoard(); api.delMk(id); return; }
+      if (t.id === 'seo-new') { const res = await api.newSeo(); if (res.ok) { seo.unshift(await res.json()); renderSeo(); } return; }
+      const ds = t.closest('[data-seo-del]'); if (ds) { const id = ds.getAttribute('data-seo-del')!; seo = seo.filter((a) => a.id !== id); renderSeo(); api.delSeo(id); return; }
+    });
+    document.addEventListener('change', (e) => {
+      const t = e.target as HTMLElement;
+      const g = (a: string) => t.getAttribute(a);
+      const val = (t as HTMLSelectElement | HTMLInputElement).value;
+      if (g('data-mk-status')) { const id = g('data-mk-status')!; const it = items.find((i) => i.id === id)!; it.status = val as Status; renderBoard(); api.patchMk(id, { status: it.status }); return; }
+      if (g('data-mk-channel')) { const id = g('data-mk-channel')!; const it = items.find((i) => i.id === id)!; it.channel = val as Channel; renderBoard(); api.patchMk(id, { channel: it.channel }); return; }
+      if (g('data-mk-project')) { const id = g('data-mk-project')!; const it = items.find((i) => i.id === id)!; it.project = val || null; renderBoard(); api.patchMk(id, { project: it.project }); return; }
+      if (g('data-mk-date')) { const id = g('data-mk-date')!; const it = items.find((i) => i.id === id)!; it.scheduled_for = val || null; renderBoard(); api.patchMk(id, { scheduled_for: it.scheduled_for }); return; }
+      if (g('data-seo-project')) { const id = g('data-seo-project')!; const a = seo.find((x) => x.id === id)!; a.project = val || null; api.patchSeo(id, { project: a.project }); return; }
+      if (g('data-seo-status')) { const id = g('data-seo-status')!; const a = seo.find((x) => x.id === id)!; a.status = val as Status; renderSeo(); api.patchSeo(id, { status: a.status }); return; }
+    });
+    // inline text edits commit on blur
+    document.addEventListener('blur', (e) => {
+      const t = e.target as HTMLElement;
+      const g = (a: string) => t.getAttribute(a);
+      const text = t.textContent?.trim() ?? '';
+      if (g('data-mk-title')) { const id = g('data-mk-title')!; const it = items.find((i) => i.id === id)!; if (it.title !== text) { it.title = text; api.patchMk(id, { title: text }); } return; }
+      if (g('data-seo-title')) { const id = g('data-seo-title')!; const a = seo.find((x) => x.id === id)!; if (a.title !== text) { a.title = text; api.patchSeo(id, { title: text }); } return; }
+      if (g('data-seo-kw')) { const id = g('data-seo-kw')!; const a = seo.find((x) => x.id === id)!; if (a.keyword !== text) { a.keyword = text; api.patchSeo(id, { keyword: text }); } return; }
+    }, true);
+
+    renderAll();
+  </script>
 </AdminShell>

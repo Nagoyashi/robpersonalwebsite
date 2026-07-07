@@ -1,14 +1,218 @@
 ---
 export const prerender = false;
 import AdminShell from '../../layouts/AdminShell.astro';
-import PageHeader from '../../components/admin/PageHeader.astro';
+import { listNotes } from '../../lib/ctrl/db';
+
+// SSR the initial set (server-side, service-role). The island hydrates from it.
+const initial = await listNotes();
 ---
 
 <AdminShell page="notes" title="rob//ctrl — notes">
-  <div style="max-width:1280px;margin:0 auto">
-    <PageHeader name="notes" subtitle="quick capture · project notes · ideas" />
-    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
-      — shell scaffold; the notes editor lands in Phase 2 —
-    </p>
+  <div style="max-width:1280px;margin:0 auto;height:calc(100vh - 98px);display:flex;flex-direction:column">
+    <div style="margin-bottom:18px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500;color:#f0f3f8">
+        <span style="color:#ff2e97;text-shadow:0 0 8px rgba(255,46,151,.5);margin-right:8px">$</span>notes
+      </div>
+    </div>
+
+    <div
+      style="flex:1;display:grid;grid-template-columns:180px 300px 1fr;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;background:#090b14;min-height:0"
+    >
+      <!-- folders -->
+      <div
+        id="nt-folders"
+        style="border-right:1px solid rgba(255,255,255,.08);padding:16px 12px;display:flex;flex-direction:column;gap:3px;background:rgba(6,7,15,.5)"
+      >
+      </div>
+
+      <!-- list -->
+      <div style="border-right:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;min-height:0">
+        <div style="padding:14px;display:flex;gap:9px;border-bottom:1px solid rgba(255,255,255,.06)">
+          <input
+            id="nt-search"
+            placeholder="Search"
+            style="flex:1;background:#0d1018;border:1px solid rgba(255,255,255,.09);border-radius:8px;padding:8px 11px;color:#f0f3f8;font-size:12.5px;outline:none"
+          />
+          <button
+            id="nt-new"
+            title="New note"
+            style="width:36px;flex-shrink:0;border-radius:8px;border:1px solid rgba(0,224,255,.3);background:rgba(0,224,255,.1);color:#00e0ff;font-size:20px;line-height:1;cursor:pointer"
+            >+</button
+          >
+        </div>
+        <div id="nt-list" style="flex:1;overflow-y:auto"></div>
+      </div>
+
+      <!-- editor -->
+      <div id="nt-editor" style="display:flex;flex-direction:column;min-height:0"></div>
+    </div>
   </div>
+
+  <script type="application/json" id="nt-initial" set:html={JSON.stringify(initial)}></script>
+
+  <script>
+    type Note = { id: string; folder: 'Projects' | 'Ideas' | 'Personal'; body: string; updated_at: string };
+    const FOLDERS: Note['folder'][] = ['Projects', 'Ideas', 'Personal'];
+
+    const $ = (id: string) => document.getElementById(id)!;
+    const esc = (s: string) =>
+      s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+    const firstLine = (b: string) => (b || '').split('\n').find((l) => l.trim())?.trim() ?? '';
+    const title = (b: string) => firstLine(b) || 'New note';
+    const snippet = (b: string) => {
+      const lines = (b || '').split('\n').map((l) => l.trim()).filter(Boolean);
+      return lines.slice(1).join(' ') || (lines.length ? '' : 'No additional text');
+    };
+    const relTime = (iso: string) => {
+      const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+      if (days <= 0) {
+        const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins}m ago`;
+        return `${Math.floor(mins / 60)}h ago`;
+      }
+      if (days === 1) return 'Yesterday';
+      if (days < 7) return `${days} days ago`;
+      return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' }).format(new Date(iso));
+    };
+
+    let notes: Note[] = JSON.parse($('nt-initial').textContent || '[]');
+    let activeId: string | null = null;
+    let folder: 'All Notes' | Note['folder'] = 'All Notes';
+    let search = '';
+
+    const bySortedUpdated = (a: Note, b: Note) => b.updated_at.localeCompare(a.updated_at);
+    const visible = () =>
+      notes
+        .filter((n) => folder === 'All Notes' || n.folder === folder)
+        .filter((n) => !search || n.body.toLowerCase().includes(search.toLowerCase()))
+        .sort(bySortedUpdated);
+
+    function renderFolders() {
+      const counts: Record<string, number> = { 'All Notes': notes.length };
+      for (const f of FOLDERS) counts[f] = notes.filter((n) => n.folder === f).length;
+      const items: (typeof folder)[] = ['All Notes', ...FOLDERS];
+      $('nt-folders').innerHTML = items
+        .map((f) => {
+          const active = f === folder;
+          const style = `padding:8px 11px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border:none;width:100%;text-align:left;background:${active ? 'rgba(0,224,255,.1)' : 'transparent'};color:${active ? '#00e0ff' : '#8b949e'}`;
+          return `<button data-folder="${f}" style="${style}"><span>${f}</span><span style="font-size:11px;opacity:.6">${counts[f]}</span></button>`;
+        })
+        .join('');
+    }
+
+    function renderList() {
+      const rows = visible();
+      const el = $('nt-list');
+      if (!rows.length) {
+        el.innerHTML =
+          '<div style="padding:24px;text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#6e7681">no notes</div>';
+        return;
+      }
+      el.innerHTML = rows
+        .map((n) => {
+          const active = n.id === activeId;
+          const style = `display:block;width:100%;text-align:left;padding:12px 14px;border:none;border-bottom:1px solid rgba(255,255,255,.05);border-left:2px solid ${active ? '#00e0ff' : 'transparent'};background:${active ? 'rgba(0,224,255,.07)' : 'transparent'};cursor:pointer`;
+          return `<button data-id="${n.id}" style="${style}">
+            <div style="font-size:13.5px;font-weight:600;color:#f0f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(title(n.body))}</div>
+            <div style="display:flex;gap:7px;margin-top:3px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681;flex-shrink:0">${relTime(n.updated_at)}</span><span style="font-size:12px;color:#6e7681;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(snippet(n.body))}</span></div>
+          </button>`;
+        })
+        .join('');
+    }
+
+    function renderEditor() {
+      const active = notes.find((n) => n.id === activeId);
+      const el = $('nt-editor');
+      if (!active) {
+        el.innerHTML =
+          '<div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:\'JetBrains Mono\',monospace;font-size:13px;color:#6e7681">select or create a note</div>';
+        return;
+      }
+      el.innerHTML = `
+        <div style="padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.06)">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6e7681">Edited ${relTime(active.updated_at)}</span>
+          <button id="nt-del" title="Delete note" style="border:none;background:transparent;color:#6e7681;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px">🗑</button>
+        </div>
+        <textarea id="nt-body" placeholder="Start writing…" style="flex:1;width:100%;resize:none;border:none;outline:none;background:transparent;color:#e6edf3;font-family:'Poppins',sans-serif;font-size:15px;line-height:1.7;padding:24px 28px"></textarea>`;
+      const ta = $('nt-body') as HTMLTextAreaElement;
+      ta.value = active.body;
+      ta.addEventListener('input', onEdit);
+      $('nt-del').addEventListener('click', onDelete);
+      ta.focus();
+    }
+
+    function renderAll() {
+      renderFolders();
+      renderList();
+      renderEditor();
+    }
+
+    // --- actions ---
+    let saveTimer: number | undefined;
+    function onEdit(e: Event) {
+      const active = notes.find((n) => n.id === activeId);
+      if (!active) return;
+      active.body = (e.target as HTMLTextAreaElement).value;
+      active.updated_at = new Date().toISOString();
+      clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(async () => {
+        await fetch(`/admin/api/notes/${active.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ body: active.body }),
+        });
+        renderList(); // reflect new title/snippet/order (editor keeps focus)
+      }, 500);
+    }
+
+    async function onDelete() {
+      if (!activeId) return;
+      const id = activeId;
+      const rest = visible().filter((n) => n.id !== id);
+      notes = notes.filter((n) => n.id !== id);
+      activeId = rest[0]?.id ?? null;
+      renderAll();
+      await fetch(`/admin/api/notes/${id}`, { method: 'DELETE' });
+    }
+
+    async function onNew() {
+      const f = folder === 'All Notes' ? 'Projects' : folder;
+      const res = await fetch('/admin/api/notes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ folder: f }),
+      });
+      if (!res.ok) return;
+      const note: Note = await res.json();
+      notes.unshift(note);
+      activeId = note.id;
+      if (folder !== 'All Notes' && folder !== f) folder = f;
+      renderAll();
+    }
+
+    // --- wiring ---
+    $('nt-folders').addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('[data-folder]');
+      if (!btn) return;
+      folder = btn.getAttribute('data-folder') as typeof folder;
+      renderFolders();
+      renderList();
+    });
+    $('nt-list').addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('[data-id]');
+      if (!btn) return;
+      activeId = btn.getAttribute('data-id');
+      renderList();
+      renderEditor();
+    });
+    ($('nt-search') as HTMLInputElement).addEventListener('input', (e) => {
+      search = (e.target as HTMLInputElement).value;
+      renderList();
+    });
+    $('nt-new').addEventListener('click', onNew);
+
+    renderAll();
+  </script>
 </AdminShell>
