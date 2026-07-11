@@ -193,18 +193,29 @@ from the codebase rather than told to me — please verify.
 
 ## ADR-013 — Control-center data layer: connector registry + central DB
 
-- **Status.** Accepted, not yet implemented (v0.3.0).
+- **Status.** Accepted; GitHub pull connector + snapshotting implemented in
+  v0.3.0 (#25).
 - **Context.** Data must flow in from many projects (GitHub, web analytics,
   uptime, revenue) and feed dashboards — and later flow back out as control
   actions. The Odysseus fork (AGPL-3.0, Python/FastAPI) has an excellent
   connector/MCP pattern and schema, but a direct graft would impose AGPL (repos
   are going private) and a second stack.
 - **Decision.** Build a **typed connector registry** in TypeScript — each source
-  is a `fetch() → normalized records` module — writing to the central Postgres
-  (the source of truth), scheduled via Vercel Cron. **Pull** connectors first
-  (GitHub, reusing `github.ts`); **push** ingestion (per-project API keys) and
-  **write-back** (a read-WRITE GitHub App) come in later phases. Odysseus is used
-  as a **blueprint only**, not grafted — so the code stays closed and AGPL-free.
+  is a `fetch() → normalized records` module (`src/lib/ctrl/connectors/*`)
+  writing normalized rows into the central Postgres `snapshots` table. **Pull**
+  connectors first (GitHub, via `connectors/github.ts` — `githubOps()`); **push**
+  ingestion (per-project API keys) and **write-back** (a read-WRITE GitHub App)
+  come in later phases. Odysseus is used as a **blueprint only**, not grafted —
+  so the code stays closed and AGPL-free.
+- **Scheduling.** A **scheduled GitHub Action** (`.github/workflows/snapshot.yml`)
+  hits the secret-protected `/api/cron/snapshot` endpoint hourly — **not** Vercel
+  Cron (which needs Pro for sub-daily runs). Same pattern as the uptime pinger.
+- **Read path.** The Overview page reads **snapshot-first** (latest row from
+  `snapshots`), falling back to a **live** connector fetch, then to `products.ts`
+  — so the dashboard stays fast and survives a GitHub outage/rate limit.
+  Connector targets are derived from `products.ts` (the source of truth); the
+  `connector_config` registry stays available for per-project overrides but isn't
+  required to run.
 - **Rationale.** One place data enters (mirrors `products.ts`); resilient
   (snapshots survive a source outage); coherent single TS stack; no AGPL
   entanglement. Every metric must trace to a real source — no fabricated numbers.

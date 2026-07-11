@@ -2,37 +2,27 @@
  * overview.ts — control-center Overview data (private /admin plane).
  *
  * Runs SERVER-SIDE at request time (the page is `prerender = false`). Merges
- * the products.ts source of truth with live GitHub data (releases + open
- * milestone + its issues). Every GitHub call is wrapped and falls back to
- * config, so a private repo with no App access, a rate limit, or a hiccup
- * degrades to honest empty/manual states — never a fabricated cycle or metric.
+ * the products.ts source of truth with each project's normalized ops row.
+ *
+ * Read path (ADR-013, #25): SNAPSHOT-FIRST — the latest Supabase snapshot
+ * written by the snapshot cron (fast, and survives a GitHub outage/rate limit).
+ * If no snapshot exists yet, it falls back to a LIVE connector fetch, then to
+ * products.ts. So the page degrades to honest empty/manual states — never a
+ * fabricated cycle or metric.
  *
  * Token: read-only GitHub App installation token (ADR-007), a non-PUBLIC_ env
  * var — server-only, never bundled to the client. Public repos work without it.
  */
 import { products, type Product } from '../../config/products';
 import { relativeTime } from '../format';
+import { githubOps, type OpsMetrics } from './connectors/github';
+import { latestSnapshot } from './db';
 
-const API = 'https://api.github.com';
-const TIMEOUT_MS = 8000;
-const TOKEN = process.env.FLEET_GITHUB_TOKEN || process.env.GITHUB_TOKEN || '';
-
-async function gh<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${API}${path}`, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'kissrobert-ctrl',
-        ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
-      },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
+/** A project's ops row, snapshot-first with a live connector fallback. */
+async function opsMetricsFor(p: Product): Promise<OpsMetrics | null> {
+  const snap = await latestSnapshot<OpsMetrics>(p.slug, 'github');
+  if (snap) return snap.metrics;
+  return githubOps(p);
 }
 
 // Status → accent (DESIGN_SPEC §1). bg is the same colour at 10% alpha.
@@ -107,24 +97,6 @@ export interface Detail {
   intakeColor: string;
 }
 
-interface ApiRelease {
-  tag_name: string;
-  name: string | null;
-  published_at: string | null;
-  draft: boolean;
-}
-interface ApiMilestone {
-  number: number;
-  title: string;
-  description: string | null;
-  open_issues: number;
-  closed_issues: number;
-}
-interface ApiIssue {
-  title: string;
-  pull_request?: unknown;
-}
-
 function hostOf(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
@@ -151,9 +123,9 @@ function fallbackVersionLabel(p: Product): { version: string; lastShipped: strin
 
 export async function getProjectDetail(slug: string): Promise<Detail> {
   const p = products.find((x) => x.slug === slug) ?? products[0];
-  const path = p.repo && !p.manualOnly ? `${p.repo.owner}/${p.repo.name}` : null;
+  const metrics = await opsMetricsFor(p);
 
-  // --- live GitHub (public repos always; private only with App access) ---
+  // --- format the ops row (snapshot or live) into the Detail view ---
   let version = '';
   let lastShipped = '';
   let releases: ReleaseRow[] = [];
@@ -166,47 +138,36 @@ export async function getProjectDetail(slug: string): Promise<Detail> {
   let done: string[] = [];
   let upcoming: string[] = [];
 
-  if (path) {
-    const rels = await gh<ApiRelease[]>(`/repos/${path}/releases`);
-    const live = (rels ?? []).filter((r) => !r.draft);
-    if (live.length) {
-      version = live[0].tag_name;
-      lastShipped = `shipped ${relativeTime(live[0].published_at)}`;
-      releases = live.slice(0, 4).map((r) => ({
-        version: r.tag_name,
-        when: relativeTime(r.published_at),
-        title: r.name || r.tag_name,
-      }));
+  if (metrics) {
+    if (metrics.version) {
+      version = metrics.version;
+      // Relative time is computed HERE, at read — never baked into the snapshot.
+      lastShipped = `shipped ${relativeTime(metrics.lastPublishedAt)}`;
     }
+    releases = metrics.releases.map((r) => ({
+      version: r.version,
+      when: relativeTime(r.publishedAt),
+      title: r.title,
+    }));
 
-    // null => couldn't read (private repo without App access / 404 / rate
-    // limit) — leave the cycle empty so it degrades to the honest "no data"
-    // state, NOT a fabricated "between phases". [] => read OK, genuinely none.
-    const ms = await gh<ApiMilestone[]>(`/repos/${path}/milestones?state=open`);
-    if (ms !== null) {
-      const open = ms[0];
-      if (open) {
-        cycleName = open.title;
-        cycleSummary = open.description?.trim() || 'Open milestone — issues in progress.';
-        cyclePhase = 'in progress';
-        const total = open.open_issues + open.closed_issues;
-        progress = total ? Math.round((open.closed_issues / total) * 100) : 0;
-        milestoneText = open.title;
-        progressText = total ? `${open.closed_issues} / ${total} issues` : 'no issues';
-        const [closed, openIssues] = await Promise.all([
-          gh<ApiIssue[]>(`/repos/${path}/issues?milestone=${open.number}&state=closed&per_page=100`),
-          gh<ApiIssue[]>(`/repos/${path}/issues?milestone=${open.number}&state=open&per_page=100`),
-        ]);
-        done = (closed ?? []).filter((i) => !i.pull_request).slice(0, 4).map((i) => i.title);
-        upcoming = (openIssues ?? []).filter((i) => !i.pull_request).slice(0, 4).map((i) => i.title);
-      } else {
-        cycleName = 'between phases';
-        cyclePhase = 'idle';
-        cycleSummary = 'No open milestone right now.';
-        milestoneText = 'no active milestone · between phases';
-        progressText = version ? 'shipped' : '—';
-        progress = version ? 100 : 0;
-      }
+    if (metrics.cycle) {
+      const cy = metrics.cycle;
+      cycleName = cy.name;
+      cycleSummary = cy.summary;
+      cyclePhase = 'in progress';
+      progress = cy.totalIssues ? Math.round((cy.closedIssues / cy.totalIssues) * 100) : 0;
+      milestoneText = cy.name;
+      progressText = cy.totalIssues ? `${cy.closedIssues} / ${cy.totalIssues} issues` : 'no issues';
+      done = cy.done;
+      upcoming = cy.upcoming;
+    } else if (metrics.milestoneRead) {
+      // Read OK but no open milestone — an honest "between phases", NOT "no data".
+      cycleName = 'between phases';
+      cyclePhase = 'idle';
+      cycleSummary = 'No open milestone right now.';
+      milestoneText = 'no active milestone · between phases';
+      progressText = version ? 'shipped' : '—';
+      progress = version ? 100 : 0;
     }
   }
 
