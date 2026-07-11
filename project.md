@@ -13,11 +13,14 @@ default, and is honest: real data only, no invented metrics.
 
 ## Current phase + status
 
-- **Phase 1 — Studio redesign + live fleet** (in progress, `v0.2.0`).
-  Rebuilt on Astro with a build-time GitHub data layer (`products.ts` source of
-  truth + `github.ts` enrichment), the homepage sections (hero, fleet, now, log,
-  about, contact), and `/now` `/uses` `/log` pages. Deploy moves to GitHub Pages
-  via Actions with a daily rebuild.
+- **Phase 4 — Control center** (`v0.3.0`, Phase A implemented). The site is now
+  a **two-plane app** on Vercel (Pages retired): the public homepage plus a
+  private, OAuth-gated **`/admin`** console. Landed this cycle: Vercel migration
+  (ADR-010), Supabase Postgres + single-operator GitHub-OAuth gate (ADR-012),
+  the Unified Ops View (snapshot-first, live fallback), the GitHub **connector +
+  scheduled snapshots** (ADR-013), **uptime** monitoring + a real hero status
+  badge, Notes/Marketing CRUD, and the **security baseline** (audit log + HTTP
+  headers). Remaining before release: notes + tag.
 
 ## Roadmap (phases)
 
@@ -36,15 +39,19 @@ default, and is honest: real data only, no invented metrics.
   console — the operator's source of truth for progress, analytics, and control
   across all projects. **Phase A** (this cycle): migrate hosting to **Vercel**
   (retire Pages), **Supabase** Postgres + GitHub-OAuth login gating `/admin`,
-  server connectors (reusing `github.ts`) + Vercel Cron, and the **Unified Ops
-  View** (one status line per project). Phases B–E (analytics depth, write-back
-  control plane, AI fleet-digest, business/revenue metrics) follow. Decisions in
-  [DECISIONS.md](DECISIONS.md) ADR-009…013; tasks on board #7. Built in TS with
-  the Odysseus fork as a blueprint only (no AGPL graft).
+  server connectors (reusing `github.ts`) + scheduled snapshots, and the
+  **Unified Ops View** (one status line per project) — the scheduled work runs
+  via **GitHub Actions** hitting cron endpoints, not Vercel Cron. Phases B–E
+  (analytics depth,
+  write-back control plane, AI fleet-digest, business/revenue metrics) follow.
+  Decisions in [DECISIONS.md](DECISIONS.md) ADR-009…013; tasks on board #7. Built
+  in TS with the Odysseus fork as a blueprint only (no AGPL graft).
 
 ## Deferred / explicitly out of scope this cycle
 
-- **Live up/down ping** for hosted apps (status is config-driven in v1).
+- ~~**Live up/down ping** for hosted apps~~ — **shipped** in Phase 3: the
+  `/admin/uptime` monitor + a real hero status badge (#41).
+- **Contact form** on the homepage — descoped (#40); the `mailto:` link suffices.
 - **Rebuild-on-release** cross-repo wiring (Phase 2).
 - **Private-repo auto-data** depends on the read-only GitHub App being installed
   and its secrets added (see [DEPLOY.md](DEPLOY.md)); until then private repos

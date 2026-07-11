@@ -19,16 +19,23 @@ Pages flow** (ADR-002/008 — retired).
      authoritative over this doc).
    - Add `www` as a redirect to the apex if desired.
    - ⚠️ Until DNS propagates, browse the `*.vercel.app` URL.
-3. **(Optional) Live data for PRIVATE repos** — the read-only GitHub App secrets
-   (ADR-007), now set as **Vercel Environment Variables** (build-time) instead
-   of GitHub Actions secrets. Without them, private repos (SabeValor, Pandavo)
-   render `products.ts` fallbacks; public repos still fetch.
-   - Vercel → Settings → **Environment Variables**: `FLEET_APP_ID`,
-     `FLEET_APP_PRIVATE_KEY` (the full `.pem`). Scope: Production + Preview.
-     Non-`PUBLIC_` names → never exposed to the client bundle.
-4. **(Later issues) Server-plane secrets** — Supabase + GitHub OAuth env vars
-   (`SUPABASE_*`, OAuth client id/secret) are added here in #23/#24, server-side
-   only.
+3. **(Optional) Live data for PRIVATE repos** — a read-only GitHub App
+   installation token (ADR-007), set as a **Vercel Environment Variable**.
+   Without it, private repos (SabeValor, Pandavo) render `products.ts`
+   fallbacks; public repos still fetch. Read by both `src/lib/github.ts`
+   (build-time) and the server connector.
+   - Vercel → Settings → **Environment Variables**: `FLEET_GITHUB_TOKEN` (the
+     installation token). Scope: Production + Preview. Non-`PUBLIC_` name → never
+     exposed to the client bundle.
+4. **Server-plane secrets** (private plane — set as Vercel env vars, server-only,
+   no `PUBLIC_` prefix; full contract in [`.env.example`](.env.example)):
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY` — Postgres +
+     auth (ADR-011).
+   - `ADMIN_GITHUB_LOGIN` — the single GitHub login allowed into `/admin` (ADR-012).
+   - `CRON_SECRET` — protects `/api/cron/ping` + `/api/cron/snapshot`; set the
+     **same** value as a **GitHub repo secret** (the Actions send it). Also add
+     repo **variable** `CTRL_PING_URL` = the deployed origin (e.g.
+     `https://kissrobert.com`) so the cron Actions know where to call.
 
 ## Deploy procedure (per release)
 
@@ -40,11 +47,12 @@ Pages flow** (ADR-002/008 — retired).
    `release.yml` then publishes the GitHub Release and closes the milestone.
    (Releasing is independent of deploying — Vercel already served the push.)
 
-> **Daily data refresh.** The old Pages flow rebuilt daily via a cron in
-> `deploy.yml` to refresh build-time GitHub fleet data. That cron is **retired
-> with Pages**; the scheduled refresh is reconnected on Vercel in **#25**
-> (Vercel Cron writing snapshots). Until #25 lands, fleet data refreshes only on
-> each push-triggered deploy — flagged here so the gap isn't silent.
+> **Data refresh.** The *public* homepage's fleet data (`github.ts`) is
+> build-time, so it refreshes on each push-triggered deploy. The *private* Ops
+> View refreshes independently: a scheduled **GitHub Action** (`snapshot.yml`,
+> hourly) hits `/api/cron/snapshot`, which writes GitHub snapshots to Supabase —
+> **not** Vercel Cron, which needs Pro for sub-daily runs (ADR-013, #25). The
+> uptime pinger (`uptime.yml`) works the same way.
 
 ## Local build / preview
 
@@ -65,9 +73,17 @@ public repos fetch unauthenticated.
 - [ ] Fleet shows correct versions/status; `/now`, `/uses`, `/log` all load.
 - [ ] Nav links resolve (no 404s); external links open correctly.
 - [ ] Looks correct on mobile width.
+- [ ] **`/admin` is gated** — an unauthenticated request redirects to
+      `/admin/login` (fails closed).
+- [ ] **Security headers present** — `curl -sSIL https://kissrobert.com` shows
+      CSP `frame-ancestors 'none'`, `X-Frame-Options`, HSTS, nosniff,
+      referrer- and permissions-policy (#27).
 
 ## Backups
 
-Not applicable for the public plane — it is **stateless** (source + git history
-are the only state; product data is re-fetched at each build). Once the private
-plane lands (#23), Supabase Postgres holds state and gets its own backup note.
+The **public plane is stateless** — source + git history are the only state;
+product data is re-fetched at each build. The **private plane** holds state in
+**Supabase Postgres** (notes, marketing, uptime checks, snapshots, audit log).
+Rely on Supabase's managed backups (Point-in-Time Recovery / daily backups per
+plan); the ordered `supabase/migrations/` are the schema's source of truth and
+recreate it from scratch.
