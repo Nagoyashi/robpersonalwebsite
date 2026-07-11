@@ -25,6 +25,45 @@ export function db(): SupabaseClient | null {
 }
 
 // ---------------------------------------------------------------------------
+// Snapshots — normalized connector output, captured over time (ADR-013, #25).
+// `metrics` is a source-agnostic jsonb payload; the read path is latest-first.
+// ---------------------------------------------------------------------------
+export interface Snapshot<T = Record<string, unknown>> {
+  metrics: T;
+  captured_at: string;
+}
+
+/** Persist one connector run's normalized row for a project. */
+export async function saveSnapshot(
+  project: string,
+  source: string,
+  metrics: Record<string, unknown>,
+): Promise<boolean> {
+  const c = db();
+  if (!c) return false;
+  const { error } = await c.from('snapshots').insert({ project, source, metrics });
+  return !error;
+}
+
+/** The most recent snapshot for a (project, source), or null if none/unconfigured. */
+export async function latestSnapshot<T = Record<string, unknown>>(
+  project: string,
+  source: string,
+): Promise<Snapshot<T> | null> {
+  const c = db();
+  if (!c) return null;
+  const { data } = await c
+    .from('snapshots')
+    .select('metrics,captured_at')
+    .eq('project', project)
+    .eq('source', source)
+    .order('captured_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as Snapshot<T>) ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Audit log — append-only trail of every control action (ADR-012, #27).
 // ---------------------------------------------------------------------------
 /**
