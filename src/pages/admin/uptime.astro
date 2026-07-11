@@ -2,13 +2,160 @@
 export const prerender = false;
 import AdminShell from '../../layouts/AdminShell.astro';
 import PageHeader from '../../components/admin/PageHeader.astro';
+import { monitors, noEndpoint } from '../../lib/ctrl/monitors';
+import { getMonitorData, listIncidents } from '../../lib/ctrl/db';
+
+const mons = monitors();
+const data = await Promise.all(mons.map(async (m) => ({ ...m, ...(await getMonitorData(m.slug)) })));
+const incidents = await listIncidents();
+const noEp = noEndpoint();
+const nameOf = (slug: string) => mons.find((m) => m.slug === slug)?.name ?? slug;
+
+const downCount = data.filter((d) => d.latest && !d.latest.ok).length;
+const allOk = downCount === 0;
+
+const pcts = data.map((d) => d.uptimePct).filter((n): n is number => n != null);
+const avgUptime = pcts.length ? (pcts.reduce((a, b) => a + b, 0) / pcts.length).toFixed(2) + '%' : '—';
+const lats = data.map((d) => d.latest?.latency_ms).filter((n): n is number => n != null);
+const avgResponse = lats.length ? Math.round(lats.reduce((a, b) => a + b, 0) / lats.length) + 'ms' : '—';
+
+function state(d: (typeof data)[number]) {
+  if (!d.latest) return { label: 'CHECKING', color: '#6e7681' };
+  return d.latest.ok ? { label: 'UP', color: '#3fb950' } : { label: 'DOWN', color: '#f85149' };
+}
+function checkedAgo(iso: string | undefined) {
+  if (!iso) return 'never checked';
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `checked ${s}s ago`;
+  if (s < 3600) return `checked ${Math.floor(s / 60)}m ago`;
+  return `checked ${Math.floor(s / 3600)}h ago`;
+}
+function sparkline(vals: number[], color: string) {
+  if (vals.length < 2) return '<div style="height:44px"></div>';
+  const w = 300, h = 44, p = 4;
+  const min = Math.min(...vals), max = Math.max(...vals), rng = max - min || 1;
+  const pts = vals.map((v, i) => {
+    const x = p + (i / (vals.length - 1)) * (w - 2 * p);
+    const y = h - p - ((v - min) / rng) * (h - 2 * p);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const [lx, ly] = pts[pts.length - 1].split(',');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"/><circle cx="${lx}" cy="${ly}" r="2.5" fill="${color}" /></svg>`;
+}
+const fmtDay = (iso: string) => new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(iso));
+function duration(a: string, b: string | null) {
+  const end = b ? new Date(b).getTime() : Date.now();
+  const mins = Math.max(1, Math.round((end - new Date(a).getTime()) / 60000));
+  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
 ---
 
 <AdminShell page="uptime" title="rob//ctrl — uptime">
   <div style="max-width:1200px;margin:0 auto">
     <PageHeader name="uptime" subtitle="endpoint health · response times · incident log" />
-    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
-      — shell scaffold; monitors + incidents land in Phase 3 —
-    </p>
+
+    <!-- Banner + stats -->
+    <div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap">
+      <div
+        style={`flex:1;min-width:220px;background:#090b14;border:1px solid ${allOk ? 'rgba(63,185,80,.25)' : 'rgba(248,81,73,.3)'};border-radius:12px;padding:20px 22px;display:flex;align-items:center;gap:14px`}
+      >
+        <span
+          style={`width:12px;height:12px;border-radius:50%;background:${allOk ? '#3fb950' : '#f85149'};box-shadow:0 0 12px ${allOk ? '#3fb950' : '#f85149'};animation:admPulseDot 2s ease-in-out infinite`}
+        ></span>
+        <div>
+          <div style="font-size:16px;font-weight:600;color:#f0f3f8">
+            {allOk ? 'All services operational' : `${downCount} service${downCount > 1 ? 's' : ''} degraded`}
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6e7681;margin-top:2px">
+            {mons.length} monitored endpoint{mons.length === 1 ? '' : 's'}
+          </div>
+        </div>
+      </div>
+      <div style="width:170px;background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681;text-transform:uppercase;letter-spacing:1px">avg uptime</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#3fb950;margin-top:6px">{avgUptime}</div>
+      </div>
+      <div style="width:170px;background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681;text-transform:uppercase;letter-spacing:1px">avg response</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#00e0ff;margin-top:6px">{avgResponse}</div>
+      </div>
+    </div>
+
+    <!-- Monitor grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:28px">
+      {
+        data.map((d) => {
+          const st = state(d);
+          return (
+            <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <span style={`width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${st.color};box-shadow:0 0 8px ${st.color}`} />
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#f0f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                    {d.name}
+                  </span>
+                </div>
+                <span style={`font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${st.color}`}>{st.label}</span>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681;margin:6px 0 14px">{d.host}</div>
+              <div set:html={sparkline(d.latencies, st.color)} />
+              <div style="display:flex;justify-content:space-between;margin-top:14px;font-family:'JetBrains Mono',monospace">
+                <div>
+                  <div style="font-size:18px;font-weight:700;color:#3fb950">{d.uptimePct != null ? d.uptimePct + '%' : '—'}</div>
+                  <div style="font-size:10px;color:#6e7681;text-transform:uppercase;letter-spacing:.5px">uptime 90d</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:18px;font-weight:700;color:#c9d1d9">{d.latest?.latency_ms != null ? d.latest.latency_ms + 'ms' : '—'}</div>
+                  <div style="font-size:10px;color:#6e7681;text-transform:uppercase;letter-spacing:.5px">{checkedAgo(d.latest?.checked_at)}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })
+      }
+      {mons.length === 0 && <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#6e7681">no monitored endpoints</div>}
+    </div>
+
+    <!-- No endpoint + incidents -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#6e7681;margin-bottom:12px">no public endpoint</div>
+        <div style="display:flex;flex-direction:column;gap:11px">
+          {
+            noEp.map((n) => (
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:'JetBrains Mono',monospace;font-size:13px">
+                <span style="display:flex;align-items:center;gap:9px">
+                  <span style="width:7px;height:7px;border-radius:2px;background:#6e7681" />
+                  <span style="color:#c9d1d9">{n.name}</span>
+                </span>
+                <span style="color:#6e7681;font-size:11px">{n.reason}</span>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+      <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#6e7681;margin-bottom:12px">incident log</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          {
+            incidents.map((inc) => (
+              <div style="display:flex;gap:12px;font-size:12.5px">
+                <span style={`width:6px;flex-shrink:0;border-radius:3px;background:${inc.resolved_at ? '#d29922' : '#f85149'};margin:2px 0`} />
+                <div>
+                  <div style="color:#c9d1d9">
+                    <span style="font-weight:600">{nameOf(inc.project)}</span> — {inc.note}
+                  </div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681;margin-top:2px">
+                    {fmtDay(inc.started_at)} · down {duration(inc.started_at, inc.resolved_at)} ·{' '}
+                    <span style={inc.resolved_at ? 'color:#3fb950' : 'color:#f85149'}>{inc.resolved_at ? 'resolved' : 'ongoing'}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          }
+          {incidents.length === 0 && <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#6e7681">no incidents recorded</div>}
+        </div>
+      </div>
+    </div>
   </div>
 </AdminShell>

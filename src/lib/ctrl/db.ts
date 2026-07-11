@@ -8,9 +8,10 @@
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const env = (k: string): string => (import.meta.env[k] as string | undefined) ?? process.env[k] ?? '';
-const URL = env('SUPABASE_URL');
-const SERVICE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
+// Static import.meta.env access (dynamic keys silently miss custom vars) +
+// process.env for the Vercel runtime.
+const URL = import.meta.env.SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SERVICE_KEY = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 /** True once the service-role key is configured (env). */
 export const dbConfigured = Boolean(URL && SERVICE_KEY);
@@ -145,4 +146,103 @@ export async function deleteSeo(id: string): Promise<boolean> {
   if (!c) return false;
   const { error } = await c.from('seo_articles').delete().eq('id', id);
   return !error;
+}
+
+// ---------------------------------------------------------------------------
+// Uptime — checks + incidents (written by the cron pinger, read by the page)
+// ---------------------------------------------------------------------------
+export interface UptimeCheck {
+  ok: boolean;
+  latency_ms: number | null;
+  status: number | null;
+  checked_at: string;
+}
+export interface Incident {
+  id: string;
+  project: string;
+  started_at: string;
+  resolved_at: string | null;
+  note: string;
+}
+export interface MonitorData {
+  latest: UptimeCheck | null;
+  latencies: number[]; // oldest→newest, for the sparkline
+  uptimePct: number | null; // ok ratio over 90d, 0–100
+}
+
+export async function recordCheck(
+  project: string,
+  ok: boolean,
+  latency_ms: number | null,
+  status: number | null,
+): Promise<void> {
+  const c = db();
+  if (!c) return;
+  await c.from('uptime_checks').insert({ project, ok, latency_ms, status });
+}
+
+/** Most recent check for a project (used by the pinger for consecutive-fail logic). */
+export async function lastCheck(project: string): Promise<UptimeCheck | null> {
+  const c = db();
+  if (!c) return null;
+  const { data } = await c
+    .from('uptime_checks')
+    .select('ok,latency_ms,status,checked_at')
+    .eq('project', project)
+    .order('checked_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as UptimeCheck) ?? null;
+}
+
+export async function openIncidentFor(project: string): Promise<Incident | null> {
+  const c = db();
+  if (!c) return null;
+  const { data } = await c
+    .from('incidents')
+    .select('id,project,started_at,resolved_at,note')
+    .eq('project', project)
+    .is('resolved_at', null)
+    .maybeSingle();
+  return (data as Incident) ?? null;
+}
+export async function openIncident(project: string, note: string): Promise<void> {
+  const c = db();
+  if (!c) return;
+  await c.from('incidents').insert({ project, note });
+}
+export async function resolveIncident(id: string): Promise<void> {
+  const c = db();
+  if (!c) return;
+  await c.from('incidents').update({ resolved_at: new Date().toISOString() }).eq('id', id);
+}
+
+/** Latest check + last 48 latencies + 90d uptime% for one monitor. */
+export async function getMonitorData(project: string): Promise<MonitorData> {
+  const c = db();
+  if (!c) return { latest: null, latencies: [], uptimePct: null };
+  const since = new Date(Date.now() - 90 * 86_400_000).toISOString();
+  const [recent, total, oks] = await Promise.all([
+    c.from('uptime_checks').select('ok,latency_ms,status,checked_at').eq('project', project).order('checked_at', { ascending: false }).limit(48),
+    c.from('uptime_checks').select('id', { count: 'exact', head: true }).eq('project', project).gte('checked_at', since),
+    c.from('uptime_checks').select('id', { count: 'exact', head: true }).eq('project', project).gte('checked_at', since).eq('ok', true),
+  ]);
+  const rows = (recent.data ?? []) as UptimeCheck[];
+  const latencies = rows
+    .map((r) => r.latency_ms)
+    .filter((n): n is number => n != null)
+    .reverse();
+  const uptimePct = total.count ? Math.round(((oks.count ?? 0) / total.count) * 1000) / 10 : null;
+  return { latest: rows[0] ?? null, latencies, uptimePct };
+}
+
+export async function listIncidents(limit = 8): Promise<Incident[]> {
+  const c = db();
+  if (!c) return [];
+  const { data } = await c
+    .from('incidents')
+    .select('id,project,started_at,resolved_at,note')
+    .order('started_at', { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Incident[];
 }

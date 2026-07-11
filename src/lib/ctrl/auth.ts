@@ -9,16 +9,15 @@
 import { createServerClient } from '@supabase/ssr';
 import type { AstroCookies } from 'astro';
 
-// Read via import.meta.env (Vite loads .env in dev; Vercel inlines the build
-// env). Fall back to process.env for the Vercel serverless runtime. These are
-// non-rotating, non-secret values (URL, publishable key, a GitHub login).
-const env = (k: string): string => (import.meta.env[k] as string | undefined) ?? process.env[k] ?? '';
-
-const SUPABASE_URL = env('SUPABASE_URL');
-const SUPABASE_KEY = env('SUPABASE_ANON_KEY');
+// Static import.meta.env access (Vite only resolves literal keys — a dynamic
+// import.meta.env[k] silently misses custom vars) + process.env for the Vercel
+// runtime. These are non-rotating, non-secret values (URL, publishable key,
+// a GitHub login).
+const SUPABASE_URL = import.meta.env.SUPABASE_URL || process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = import.meta.env.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
 /** GitHub login allowed into /admin (single operator). */
-const ADMIN_LOGIN = env('ADMIN_GITHUB_LOGIN').toLowerCase();
+const ADMIN_LOGIN = (import.meta.env.ADMIN_GITHUB_LOGIN || process.env.ADMIN_GITHUB_LOGIN || '').toLowerCase();
 
 function parseCookieHeader(header: string | null): { name: string; value: string }[] {
   if (!header) return [];
