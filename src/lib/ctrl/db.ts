@@ -236,6 +236,47 @@ export async function getMonitorData(project: string): Promise<MonitorData> {
   return { latest: rows[0] ?? null, latencies, uptimePct };
 }
 
+// ---------------------------------------------------------------------------
+// Aggregate fleet health — build-time read for the public hero badge (#41).
+// ---------------------------------------------------------------------------
+export type FleetStatus = 'operational' | 'degraded' | 'unknown';
+export interface FleetHealth {
+  status: FleetStatus;
+  up: number;
+  down: number;
+  total: number;
+}
+
+// A check older than this can't be trusted as "current" — the cron pings every
+// ~5 min, so 30 min of silence means the pinger is stuck, not that all is well.
+const FRESH_MS = 30 * 60_000;
+
+/**
+ * Roll each monitored project's latest check into one honest fleet state:
+ * - operational: every monitor has a fresh, passing check
+ * - degraded: at least one monitor's latest check failed
+ * - unknown: db unconfigured, some monitor has no/stale data (never claim green
+ *   on absent data — see #41 acceptance)
+ */
+export async function fleetHealth(projects: string[]): Promise<FleetHealth> {
+  const total = projects.length;
+  const c = db();
+  if (!c || total === 0) return { status: 'unknown', up: 0, down: 0, total };
+  const checks = await Promise.all(projects.map((p) => lastCheck(p)));
+  const now = Date.now();
+  let up = 0;
+  let down = 0;
+  let unresolved = 0; // missing or stale — can't confirm either way
+  for (const chk of checks) {
+    if (!chk || now - new Date(chk.checked_at).getTime() > FRESH_MS) unresolved++;
+    else if (chk.ok) up++;
+    else down++;
+  }
+  if (down > 0) return { status: 'degraded', up, down, total };
+  if (unresolved > 0) return { status: 'unknown', up, down, total };
+  return { status: 'operational', up, down, total };
+}
+
 export async function listIncidents(limit = 8): Promise<Incident[]> {
   const c = db();
   if (!c) return [];

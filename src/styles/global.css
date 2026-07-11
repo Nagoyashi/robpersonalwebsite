@@ -18,6 +18,7 @@
   --accent2: #ff2e97; /* neon magenta */
   --green: #3fb950; /* live */
   --amber: #d29922; /* beta */
+  --red: #f85149; /* down */
   --blue: #58a6ff; /* building */
   --violet: #b07cff; /* maintained */
 
@@ -238,21 +239,29 @@ a:hover {
 .hero {
   padding-block: 5.5rem 4rem;
 }
-/* Status badge. Currently a static "all systems online" flourish; to be wired
-   to a real per-fleet uptime signal via the control center (see #41). */
+/* Status badge. Wired to a real per-fleet uptime signal read at build time via
+   the control center (see #41): green when every monitored endpoint's latest
+   check passes, red when one is down, amber when status can't be confirmed. */
 .hero .systems {
+  --status-color: var(--green);
   font-family: var(--mono);
   font-size: 0.85rem;
-  color: var(--green);
+  color: var(--status-color);
   margin-bottom: 1.2rem;
+}
+.hero .systems.is-degraded {
+  --status-color: var(--red);
+}
+.hero .systems.is-unknown {
+  --status-color: var(--amber);
 }
 .hero .systems .dot {
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
+  background: var(--status-color);
+  box-shadow: 0 0 8px var(--status-color);
   margin-right: 0.5rem;
   animation: pulse 2s ease-in-out infinite;
 }
