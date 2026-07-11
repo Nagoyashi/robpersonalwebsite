@@ -7,12 +7,30 @@ import { fleet } from '../config/products';
 import { getSiteData } from '../lib/github';
 import { fmtDate } from '../lib/format';
 import { getEntry } from 'astro:content';
+import { monitors } from '../lib/ctrl/monitors';
+import { fleetHealth, type FleetStatus } from '../lib/ctrl/db';
 
 // --- Build-time GitHub data (graceful: falls back to products.ts on failure) ---
 // Skipped entirely under construction mode — no GitHub calls to render a placeholder.
 const { fleet: fleetItems, releases, shipping } = COMING_SOON
   ? { fleet: [], releases: [], shipping: [] }
   : await getSiteData(fleet);
+
+// --- Hero status badge: real fleet uptime, read at build time (#41) ---
+// Snapshot of each monitored endpoint's latest check. Degrades to "unknown"
+// (never a fake green) when the control-center db is unconfigured at build.
+const health = COMING_SOON
+  ? { status: 'unknown' as FleetStatus, up: 0, down: 0, total: 0 }
+  : await fleetHealth(monitors().map((m) => m.slug));
+const badge: Record<FleetStatus, { cls: string; text: string }> = {
+  operational: { cls: '', text: '// all systems online' },
+  degraded: {
+    cls: 'is-degraded',
+    text: `// ${health.down} system${health.down === 1 ? '' : 's'} degraded`,
+  },
+  unknown: { cls: 'is-unknown', text: '// status unknown' },
+};
+const { cls: statusCls, text: statusText } = badge[health.status];
 
 // flagship first, then the rest in config order
 const ordered = [...fleetItems].sort((a, b) => Number(Boolean(b.flagship)) - Number(Boolean(a.flagship)));
@@ -26,7 +44,7 @@ const nowHeadline = now?.data.headline ?? '';
 <Base title="Robert Kiss — Builder & Entrepreneur">
   <!-- Hero -->
   <section class="hero container">
-    <p class="systems"><span class="dot"></span>// all systems online</p>
+    <p class={`systems ${statusCls}`.trim()}><span class="dot"></span>{statusText}</p>
     <h1>Hi, I'm <span class="accent">Robert</span>.</h1>
     <p class="subhead">
       I design, build, and run software products — an independent studio across finance, property,
