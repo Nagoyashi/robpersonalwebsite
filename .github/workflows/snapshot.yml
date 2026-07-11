@@ -1,0 +1,36 @@
+name: ops-snapshot
+
+# Drives the control-center GitHub ops snapshotter (#25, ADR-013). A scheduled
+# GitHub Action rather than Vercel Cron — free and plan-independent (same choice
+# as the uptime pinger). It just hits the (secret-protected) /api/cron/snapshot
+# endpoint; the endpoint runs the connectors and writes snapshots to Supabase.
+# Hourly: GitHub releases/milestones move slowly, so this is ample and cheap.
+#
+# Provisioning (shared with uptime.yml — already set for Phase 3):
+#   - repo variable  CTRL_PING_URL  = deployed origin (e.g. https://kissrobert.com)
+#   - repo secret    CRON_SECRET    = same value set as a Vercel env var
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch: {}
+
+# Don't pile up runs if one is slow.
+concurrency:
+  group: ops-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the snapshot endpoint
+        env:
+          URL: ${{ vars.CTRL_PING_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "CTRL_PING_URL (var) and CRON_SECRET (secret) must be set."; exit 1
+          fi
+          curl -fsS -X GET "$URL/api/cron/snapshot" \
+            -H "Authorization: Bearer $SECRET" \
+            -w "\nsnapshot: %{http_code}\n"
