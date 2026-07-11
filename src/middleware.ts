@@ -16,12 +16,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Load the Supabase auth deps only for guarded /admin requests — never during
   // public-page prerender (keeps supabase/tslib out of the static build).
-  const { serverClient, isAllowed } = await import('./lib/ctrl/auth');
+  const { serverClient, isAllowed, operatorLogin } = await import('./lib/ctrl/auth');
   const supabase = serverClient(context.cookies, context.request);
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!isAllowed(user)) return context.redirect('/admin/login');
+  // Hand the operator identity down to API routes for the audit trail (#27).
+  context.locals.operator = operatorLogin(user);
   return next();
 });

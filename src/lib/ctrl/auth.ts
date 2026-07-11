@@ -43,11 +43,16 @@ export function serverClient(cookies: AstroCookies, request: Request) {
   });
 }
 
+/** A Supabase user's GitHub login, lowercased ('' if absent). */
+export function operatorLogin(user: { user_metadata?: Record<string, unknown> } | null): string {
+  const meta = user?.user_metadata ?? {};
+  return String(meta.user_name ?? meta.preferred_username ?? '').toLowerCase();
+}
+
 /** True only for the allowlisted GitHub operator. Fails closed. */
 export function isAllowed(user: { user_metadata?: Record<string, unknown> } | null): boolean {
-  if (!user || !ADMIN_LOGIN) return false;
-  const meta = user.user_metadata ?? {};
-  const login = String(meta.user_name ?? meta.preferred_username ?? '').toLowerCase();
+  if (!ADMIN_LOGIN) return false;
+  const login = operatorLogin(user);
   return Boolean(login) && login === ADMIN_LOGIN;
 }
 

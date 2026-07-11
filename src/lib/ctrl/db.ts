@@ -25,6 +25,25 @@ export function db(): SupabaseClient | null {
 }
 
 // ---------------------------------------------------------------------------
+// Audit log — append-only trail of every control action (ADR-012, #27).
+// ---------------------------------------------------------------------------
+/**
+ * Record one control action against the operator who performed it. Best-effort:
+ * a failed write must never break the action it's recording (the trail is
+ * defence-in-depth, not the operation's source of truth).
+ */
+export async function audit(
+  actor: string,
+  action: string,
+  target: string | null = null,
+  detail: Record<string, unknown> = {},
+): Promise<void> {
+  const c = db();
+  if (!c) return;
+  await c.from('audit_log').insert({ actor: actor || 'unknown', action, target, detail });
+}
+
+// ---------------------------------------------------------------------------
 // Notes
 // ---------------------------------------------------------------------------
 export interface Note {
