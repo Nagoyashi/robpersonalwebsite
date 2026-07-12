@@ -13,14 +13,14 @@ default, and is honest: real data only, no invented metrics.
 
 ## Current phase + status
 
-- **Phase 4 — Control center** (`v0.3.0`, Phase A implemented). The site is now
-  a **two-plane app** on Vercel (Pages retired): the public homepage plus a
-  private, OAuth-gated **`/admin`** console. Landed this cycle: Vercel migration
-  (ADR-010), Supabase Postgres + single-operator GitHub-OAuth gate (ADR-012),
-  the Unified Ops View (snapshot-first, live fallback), the GitHub **connector +
-  scheduled snapshots** (ADR-013), **uptime** monitoring + a real hero status
-  badge, Notes/Marketing CRUD, and the **security baseline** (audit log + HTTP
-  headers). Remaining before release: notes + tag.
+- **Phase 4 — Control center.** `v0.3.0` (Phase A) is **shipped**: a
+  **two-plane app** on Vercel (Pages retired) — the public homepage plus a
+  private, OAuth-gated **`/admin`** console (Ops View, uptime, connectors +
+  snapshots, Notes/Marketing, security baseline). **Now in `v0.4.0` — "the
+  cockpit gets a brain"** (Phase D): an AI layer over the fleet — a scheduled
+  Claude "state of the fleet" digest + delivery, ops memory on Supabase
+  `pgvector`, and an instant-snapshot GitHub webhook. Odysseus (AGPL) mined as
+  blueprint only. Decisions: ADR-015; issues #58–#62 (backlog #63–#67).
 
 ## Roadmap (phases)
 
@@ -59,4 +59,9 @@ default, and is honest: real data only, no invented metrics.
 
 ## Phase log (newest first)
 
-- *(none yet — first release cycle not closed)*
+- **`v0.3.0` — Control Center (Phase A).** Shipped the two-plane app: Vercel
+  migration (Pages retired), Supabase + OAuth-gated `/admin`, Unified Ops View
+  (snapshot-first), GitHub connector + scheduled snapshots, uptime + real hero
+  badge, Notes/Marketing CRUD, security baseline (audit log + headers). Public
+  site still gated behind `COMING_SOON` (reveal held pending legal review + og
+  image).
