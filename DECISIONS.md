@@ -280,3 +280,33 @@ from the codebase rather than told to me — please verify.
 - **Revisit when.** Scheduled work outgrows fire-and-forget cron endpoints (needs
   retries/queues/observability), or a managed agent runtime would beat
   hand-rolled synthesis.
+
+## ADR-016 — Contrast with the workspace AGENTS.md (T3) standard: divergences stand
+
+- **Context.** The workspace-level `~/code/AGENTS.md` prescribes a T3 default for
+  web apps (Next.js, TypeScript, tRPC, Tailwind, PostgreSQL/Prisma, Better Auth,
+  pnpm). Audited this repo against it 2026-07-12.
+- **Decision.** The divergences are deliberate and stand:
+  - **Astro instead of Next.js** (ADR-005). Zero-JS-by-default static output
+    with build-time GitHub data is exactly this site's shape; Next.js would add
+    a client runtime the invariants here explicitly forbid.
+  - **Hand-written CSS instead of Tailwind** — one `global.css`, consistent with
+    the dependency-lean contract in CLAUDE.md.
+  - **Astro API routes instead of tRPC** — a handful of single-consumer admin
+    endpoints doesn't warrant an RPC layer.
+  - **Supabase (raw client + SQL migrations + RLS deny-by-default) instead of
+    Prisma; Supabase GitHub OAuth instead of Better Auth** (ADR-011/012) — the
+    single-operator allowlist is simpler and fails closed.
+  - **npm instead of pnpm** — irrelevant at single-app scale; not worth churn.
+- **Rationale.** The standard's *principles* already hold, several exceeded:
+  strict TS (~zero `any`), server-side authz in middleware + RLS, versioned
+  migrations with real indexes, exemplary `.env.example`, CI typecheck+build
+  gate, security headers. Only the technology choices differ, each for a reason
+  recorded in its own ADR.
+- **Gaps — tracked, not divergences.** Admin API bodies are hand-validated, not
+  Zod-schema'd → **#69**. No automated tests — "typecheck + build green" is the
+  current definition of valid (ci.yml); acceptable while the admin plane stays
+  single-operator and low-logic.
+- **Revisit when.** The control center accumulates business logic that can break
+  silently (then add Vitest for `src/lib/ctrl/`), or a greenfield app is started
+  — the T3 default applies to *it*, not retroactively here.
