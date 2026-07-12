@@ -108,41 +108,6 @@ export const products: Product[] = [
     include: false, // stealth — pulled from the public fleet (handoff non-negotiable)
     stealth: true, // control-center: ◈ stealth
   },
-  {
-    slug: 'json2viz',
-    name: 'json2viz',
-    tagline: 'A lightweight Python CLI that flattens nested JSON / JSONL into tabular CSV for inspection.',
-    status: 'maintained',
-    kind: 'cli',
-    siteUrl: null, // CLI — no hosted site
-    repo: { owner: 'Nagoyashi', name: 'json2viz', public: true },
-    fallbackVersion: null, // no tagged releases
-    fallbackDate: null,
-  },
-  {
-    slug: 'autory',
-    name: 'Autory',
-    tagline:
-      'Custom AI agents that extract and transform unstructured data from text, image, and audio. (AlpTech Software.)',
-    status: 'live',
-    kind: 'service',
-    siteUrl: 'https://www.linkedin.com/company/alptechsoftware',
-    repo: null,
-    manualOnly: true, // external — not under this account
-    fallbackVersion: null,
-    fallbackDate: null,
-  },
-  {
-    slug: 'vound',
-    name: 'VOUND',
-    tagline: 'Customer-Success decision engine — account health, value, and renewal-risk scoring.',
-    status: 'building',
-    kind: 'app',
-    siteUrl: null,
-    repo: { owner: 'Nagoyashi', name: 'vound', public: false },
-    include: false, // internal tooling — excluded from the public fleet for now
-    stealth: true, // control-center: ◈ stealth
-  },
 ];
 
 /** The fleet shown publicly (excludes opt-out entries). */
