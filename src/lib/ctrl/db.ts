@@ -295,6 +295,72 @@ export async function getMonitorData(project: string): Promise<MonitorData> {
 }
 
 // ---------------------------------------------------------------------------
+// Ops memory — pgvector semantic store for the AI layer (ADR-015, #59).
+// Embeddings via Voyage (voyage-3.5-lite, 1024-d), server-side only. Every
+// helper degrades to a no-op when the db or the embeddings key is unconfigured.
+// ---------------------------------------------------------------------------
+const VOYAGE_KEY = import.meta.env.VOYAGE_API_KEY || process.env.VOYAGE_API_KEY || '';
+const VOYAGE_MODEL = 'voyage-3.5-lite'; // 1024-d — matches ops_memory.embedding
+const EMBED_TIMEOUT_MS = 10_000;
+
+export interface MemoryHit {
+  id: string;
+  kind: string;
+  text: string;
+  source: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  similarity: number;
+}
+
+/** Embed one string via Voyage. null when unconfigured or on any failure. */
+async function embed(text: string): Promise<number[] | null> {
+  if (!VOYAGE_KEY) return null;
+  try {
+    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', Authorization: `Bearer ${VOYAGE_KEY}` },
+      body: JSON.stringify({ input: [text], model: VOYAGE_MODEL }),
+      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: { embedding: number[] }[] };
+    return json.data?.[0]?.embedding ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Record one ops memory, embedding it if possible. Best-effort: a memory is
+ * still stored (embedding null) when Voyage is unconfigured, so nothing is lost;
+ * it just won't be semantically searchable until re-embedded.
+ */
+export async function addMemory(
+  kind: string,
+  text: string,
+  source: string | null = null,
+  metadata: Record<string, unknown> = {},
+): Promise<boolean> {
+  const c = db();
+  if (!c) return false;
+  const embedding = await embed(text);
+  const { error } = await c.from('ops_memory').insert({ kind, text, source, metadata, embedding });
+  return !error;
+}
+
+/** Top-k memories most similar to `query` (empty when unconfigured/no matches). */
+export async function searchMemory(query: string, matchCount = 8): Promise<MemoryHit[]> {
+  const c = db();
+  if (!c) return [];
+  const query_embedding = await embed(query);
+  if (!query_embedding) return [];
+  const { data, error } = await c.rpc('match_ops_memory', { query_embedding, match_count: matchCount });
+  if (error) return [];
+  return (data ?? []) as MemoryHit[];
+}
+
+// ---------------------------------------------------------------------------
 // Aggregate fleet health — build-time read for the public hero badge (#41).
 // ---------------------------------------------------------------------------
 export type FleetStatus = 'operational' | 'degraded' | 'unknown';
