@@ -295,6 +295,54 @@ export async function getMonitorData(project: string): Promise<MonitorData> {
 }
 
 // ---------------------------------------------------------------------------
+// Digests — the AI "state of the fleet" briefs (ADR-015, #60).
+// ---------------------------------------------------------------------------
+export interface Digest {
+  id: string;
+  period: string;
+  summary: string;
+  highlights: string[];
+  model: string | null;
+  created_at: string;
+}
+const DIGEST_COLS = 'id,period,summary,highlights,model,created_at';
+
+export async function saveDigest(
+  period: string,
+  summary: string,
+  highlights: string[],
+  model: string | null,
+): Promise<boolean> {
+  const c = db();
+  if (!c) return false;
+  const { error } = await c.from('digests').insert({ period, summary, highlights, model });
+  return !error;
+}
+
+export async function latestDigest(): Promise<Digest | null> {
+  const c = db();
+  if (!c) return null;
+  const { data } = await c
+    .from('digests')
+    .select(DIGEST_COLS)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as Digest) ?? null;
+}
+
+export async function listDigests(limit = 10): Promise<Digest[]> {
+  const c = db();
+  if (!c) return [];
+  const { data } = await c
+    .from('digests')
+    .select(DIGEST_COLS)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Digest[];
+}
+
+// ---------------------------------------------------------------------------
 // Ops memory — pgvector semantic store for the AI layer (ADR-015, #59).
 // Embeddings via Voyage (voyage-3.5-lite, 1024-d), server-side only. Every
 // helper degrades to a no-op when the db or the embeddings key is unconfigured.
