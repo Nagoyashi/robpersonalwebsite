@@ -52,7 +52,19 @@ Pages flow** (ADR-002/008 — retired).
 > View refreshes independently: a scheduled **GitHub Action** (`snapshot.yml`,
 > hourly) hits `/api/cron/snapshot`, which writes GitHub snapshots to Supabase —
 > **not** Vercel Cron, which needs Pro for sub-daily runs (ADR-013, #25). The
-> uptime pinger (`uptime.yml`) works the same way.
+> uptime pinger (`uptime.yml`) works the same way, and the daily fleet-digest
+> (`digest.yml` → `/api/cron/digest`, ADR-015) is the same pattern.
+>
+> **Instant refresh (webhook, #62).** For zero-lag ops data, add a **GitHub
+> webhook** per fleet repo (or org-level): repo → Settings → Webhooks → Add:
+> - **Payload URL:** `https://www.kissrobert.com/api/webhooks/github`
+> - **Content type:** `application/json`
+> - **Secret:** the same value as the `GITHUB_WEBHOOK_SECRET` Vercel env var
+> - **Events:** "Let me select" → **Releases** + **Pushes**
+>
+> On release/push the endpoint HMAC-verifies the payload, runs the connector for
+> the matching product, and writes a snapshot. It fails closed (401) on a bad or
+> missing signature. The hourly Action stays as the catch-all.
 
 ## Local build / preview
 
