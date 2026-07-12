@@ -241,3 +241,42 @@ from the codebase rather than told to me — please verify.
   dependency, not a framework — within the lean-dependency contract.
 - **Revisit when.** Astro's first-party Fonts API leaves experimental, at which
   point it could replace `@fontsource` with zero dependencies.
+
+## ADR-015 — Control-center AI layer: scheduled digest + pgvector ops memory
+
+- **Status.** Proposed (v0.4.0, #58). Foundation for #59–#62.
+- **Context.** v0.3.0 made the control center a *viewer* (Ops View, uptime,
+  snapshots). v0.4.0 makes it *tell you things*: a daily "state of the fleet"
+  brief and an ops memory it can draw on. Odysseus (AGPL, **blueprint only** —
+  ADR-013) runs the same shape (scheduled agent tasks + LLM synthesis + vector
+  memory + notifications) in Python; we re-implement the pattern in the TS stack.
+- **Decision.**
+  - **Scheduling** reuses the ADR-013 mechanism: a **scheduled GitHub Action**
+    hits a secret-protected `/api/cron/digest` endpoint (`CRON_SECRET`, as with
+    `ping`/`snapshot`). **Not** Vercel Cron (Pro-gated for sub-daily) — though a
+    once-daily digest *could* run on Hobby Vercel Cron, we keep one scheduling
+    mechanism across the app.
+  - **Model.** Anthropic **Claude API**, server-side only (key is a non-`PUBLIC_`
+    env var; ADR-007 posture — never in the client bundle). Default
+    `claude-opus-4-8`; the tier is the operator's call (a once-daily digest is
+    cheap at any tier — `claude-sonnet-4-6`/`claude-haiku-4-5` are cheaper if
+    wanted). No model downgrade "for cost" is baked in.
+  - **Ops memory** lives in **Supabase `pgvector`** — a native extension, so an
+    embeddings table + a similarity query, **no separate vector DB** (Odysseus
+    uses ChromaDB because it's self-hosted Python; we don't need a second
+    service). Deny-by-default RLS, service-role only (as with every ctrl table,
+    #23).
+  - **Embeddings.** Anthropic has **no embeddings API**, so the vector source is
+    decided separately at #59: default to Supabase's in-database **`gte-small`**
+    (kept in-stack, no new vendor), with a hosted provider (e.g. Voyage) as the
+    upgrade if recall proves weak. Recorded here so the choice is deliberate.
+  - **Honesty.** The AI layer only summarizes **real** snapshot/uptime/DB data —
+    every claim traces to a source; no fabricated metrics (carries the ADR-013
+    rule into the AI layer).
+- **Rationale.** One scheduling mechanism, one datastore (Supabase does vectors
+  too), one model provider, secrets server-only — consistent with the existing
+  private plane. Turns the cockpit from passive to proactive without a second
+  stack or an AGPL graft.
+- **Revisit when.** Scheduled work outgrows fire-and-forget cron endpoints (needs
+  retries/queues/observability), or a managed agent runtime would beat
+  hand-rolled synthesis.
