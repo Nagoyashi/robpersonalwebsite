@@ -25,9 +25,12 @@ import {
 import type { OpsMetrics } from './connectors/github';
 
 const ANTHROPIC_KEY = import.meta.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || '';
-// House default (ADR-015). A once-daily brief is cheap at this tier; the tier is
-// the operator's call — swap to claude-sonnet-4-6 / claude-haiku-4-5 to trim cost.
-const MODEL = 'claude-opus-4-8';
+// Cheap by default (ADR-015): the digest is short structured-data summarization,
+// which claude-haiku-4-5 handles well at ~1/5 the cost of Opus. Override without
+// a code change via the DIGEST_MODEL env var (e.g. claude-sonnet-4-6 for more
+// analytical nuance).
+const MODEL =
+  import.meta.env.DIGEST_MODEL || process.env.DIGEST_MODEL || 'claude-haiku-4-5';
 
 /** True once the digest model is configured (env). */
 export const digestConfigured = Boolean(ANTHROPIC_KEY);

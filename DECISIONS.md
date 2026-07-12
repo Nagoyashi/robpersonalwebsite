@@ -258,9 +258,11 @@ from the codebase rather than told to me — please verify.
     mechanism across the app.
   - **Model.** Anthropic **Claude API**, server-side only (key is a non-`PUBLIC_`
     env var; ADR-007 posture — never in the client bundle). Default
-    `claude-opus-4-8`; the tier is the operator's call (a once-daily digest is
-    cheap at any tier — `claude-sonnet-4-6`/`claude-haiku-4-5` are cheaper if
-    wanted). No model downgrade "for cost" is baked in.
+    **`claude-haiku-4-5`** — the digest is short structured-data summarization,
+    well within Haiku's ability at ~1/5 the Opus cost. Overridable per-deploy via
+    the `DIGEST_MODEL` env var (e.g. `claude-sonnet-4-6` for more nuance) — no
+    code change. [Changed from the initial `claude-opus-4-8` default once the
+    task proved light — operator's cost call.]
   - **Ops memory** lives in **Supabase `pgvector`** — a native extension, so an
     embeddings table + a similarity query, **no separate vector DB** (Odysseus
     uses ChromaDB because it's self-hosted Python; we don't need a second
