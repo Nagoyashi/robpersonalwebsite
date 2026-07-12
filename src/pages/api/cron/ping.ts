@@ -16,6 +16,7 @@ import {
   openIncidentFor,
   openIncident,
   resolveIncident,
+  addMemory,
   dbConfigured,
 } from '../../../lib/ctrl/db';
 
@@ -53,6 +54,10 @@ export const GET: APIRoute = async ({ request }) => {
         if (open) await resolveIncident(open.id);
       } else if (!open && prev && !prev.ok) {
         await openIncident(m.slug, `${m.host} unreachable`);
+        // Feed the ops memory (ADR-013/015) so the digest can recall incidents.
+        await addMemory('incident', `${m.name} (${m.host}) went down — unreachable.`, m.slug, {
+          status: r.status,
+        });
       }
       return { project: m.slug, ok: r.ok, latency: r.latency, status: r.status };
     }),
