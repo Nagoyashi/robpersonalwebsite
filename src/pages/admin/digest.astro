@@ -1,0 +1,100 @@
+---
+export const prerender = false;
+import AdminShell from '../../layouts/AdminShell.astro';
+import PageHeader from '../../components/admin/PageHeader.astro';
+import { latestDigest, listDigests } from '../../lib/ctrl/db';
+import { digestConfigured } from '../../lib/ctrl/digest';
+
+const latest = await latestDigest();
+const history = await listDigests(12);
+
+const fmt = (iso: string) =>
+  new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+
+// Precompute history previews here (strip markdown to a one-line teaser) — the
+// regex confuses Astro's JSX parser if inlined into the markup below.
+const past = history.slice(1).map((d) => ({
+  when: fmt(d.created_at),
+  preview: d.summary.replace(/[#*`>\n]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90),
+}));
+---
+
+<AdminShell page="digest" title="rob//ctrl — digest">
+  <div style="max-width:900px;margin:0 auto">
+    <PageHeader name="digest" subtitle="AI state-of-the-fleet brief · synthesized daily from real signals" />
+
+    {
+      !latest && (
+        <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:28px;text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6e7681">
+            no digest yet
+          </div>
+          <div style="color:#8b949e;font-size:13.5px;margin-top:10px;max-width:52ch;margin-inline:auto">
+            {digestConfigured
+              ? 'The digest runs daily (fleet-digest Action) — or trigger it manually. The first brief lands here once it runs.'
+              : 'The digest model is not configured yet. Set ANTHROPIC_API_KEY as a Vercel env var, then run the fleet-digest Action.'}
+          </div>
+        </div>
+      )
+    }
+
+    {
+      latest && (
+        <div style="background:#090b14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px 26px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#00e0ff">
+              latest brief
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6e7681">
+              {fmt(latest.created_at)}
+              {latest.model && <span> · {latest.model}</span>}
+            </div>
+          </div>
+
+          {latest.highlights.length > 0 && (
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+              {latest.highlights.map((h) => (
+                <div style="display:flex;gap:10px;font-size:13.5px;color:#c9d1d9">
+                  <span style="color:#ff2e97;flex-shrink:0">▸</span>
+                  <span>{h}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style="white-space:pre-wrap;color:#c9d1d9;font-size:14px;line-height:1.65">
+            {latest.summary}
+          </div>
+        </div>
+      )
+    }
+
+    {
+      past.length > 0 && (
+        <div style="margin-top:24px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#6e7681;margin-bottom:12px">
+            history
+          </div>
+          <div style="display:flex;flex-direction:column">
+            {past.map((d) => (
+              <div style="display:flex;align-items:baseline;gap:14px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6e7681;min-width:150px">
+                  {d.when}
+                </span>
+                <span style="color:#8b949e;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  {d.preview}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+  </div>
+</AdminShell>

@@ -1,0 +1,36 @@
+name: fleet-digest
+
+# Drives the AI "state of the fleet" digest (#60, ADR-015). A scheduled GitHub
+# Action rather than Vercel Cron — one scheduling mechanism across the app. It
+# hits the (secret-protected) /api/cron/digest endpoint; the endpoint gathers
+# signals, calls Claude, and stores the brief. Daily at 07:07 UTC.
+#
+# Provisioning (shared with uptime.yml/snapshot.yml — already set):
+#   - repo variable  CTRL_PING_URL  = deployed origin (e.g. https://kissrobert.com)
+#   - repo secret    CRON_SECRET    = same value set as a Vercel env var
+# The endpoint additionally needs ANTHROPIC_API_KEY (+ VOYAGE_API_KEY for memory)
+# as Vercel env vars — server-side only.
+on:
+  schedule:
+    - cron: '7 7 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: fleet-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit the digest endpoint
+        env:
+          URL: ${{ vars.CTRL_PING_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "CTRL_PING_URL (var) and CRON_SECRET (secret) must be set."; exit 1
+          fi
+          curl -fsS -X GET "$URL/api/cron/digest" \
+            -H "Authorization: Bearer $SECRET" \
+            -w "\ndigest: %{http_code}\n"
