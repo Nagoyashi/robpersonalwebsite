@@ -1,5 +1,5 @@
 ---
-title: Uses
+title: Stack
 updated: "2026-06-20"
 ---
 
@@ -24,5 +24,3 @@ PostgreSQL · SQLite · Redis · Supabase · Docker · pandas
 ## Practice
 
 UI/UX design · build-in-public · single-source-of-truth docs
-
-> **[FILL IN]** Editor, terminal, machine, and any hardware you want to list.
