@@ -444,33 +444,14 @@ a:hover {
   color: var(--text);
 }
 
-/* ---- Now strip ---- */
-.now-strip {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent2);
-  border-radius: var(--radius);
-  padding: 1.4rem 1.6rem;
-}
-.now-strip .now-label {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  color: var(--accent2);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.4rem;
-}
-.now-strip .now-headline {
-  color: var(--text-strong);
-  font-size: 1.05rem;
-}
-.now-strip .now-shipping {
+/* ---- "full /log →" style link ---- */
+.more-link {
   font-family: var(--mono);
   font-size: 0.82rem;
   color: var(--dim);
   margin-top: 0.6rem;
 }
-.now-strip .now-shipping a {
+.more-link a {
   color: var(--accent);
 }
 

@@ -6,22 +6,23 @@ import FleetCard from '../components/FleetCard.astro';
 import { fleet } from '../config/products';
 import { getSiteData } from '../lib/github';
 import { fmtDate } from '../lib/format';
-import { getEntry } from 'astro:content';
 import { monitors } from '../lib/ctrl/monitors';
 import { fleetHealth, type FleetStatus } from '../lib/ctrl/db';
 
 // --- Build-time GitHub data (graceful: falls back to products.ts on failure) ---
 // Skipped entirely under construction mode — no GitHub calls to render a placeholder.
-const { fleet: fleetItems, releases, shipping } = COMING_SOON
-  ? { fleet: [], releases: [], shipping: [] }
+const { fleet: fleetItems, releases } = COMING_SOON
+  ? { fleet: [], releases: [] }
   : await getSiteData(fleet);
 
 // --- Hero status badge: real fleet uptime, read at build time (#41) ---
-// Snapshot of each monitored endpoint's latest check. Degrades to "unknown"
-// (never a fake green) when the control-center db is unconfigured at build.
+// PUBLIC-fleet monitors only — never reflect a stealth product's uptime on the
+// public plane. Degrades to "unknown" (never a fake green) when the db is
+// unconfigured at build.
+const publicMonitors = monitors().filter((m) => fleet.some((f) => f.slug === m.slug));
 const health = COMING_SOON
   ? { status: 'unknown' as FleetStatus, up: 0, down: 0, total: 0 }
-  : await fleetHealth(monitors().map((m) => m.slug));
+  : await fleetHealth(publicMonitors.map((m) => m.slug));
 const badge: Record<FleetStatus, { cls: string; text: string }> = {
   operational: { cls: '', text: '// all systems online' },
   degraded: {
@@ -34,10 +35,6 @@ const { cls: statusCls, text: statusText } = badge[health.status];
 
 // flagship first, then the rest in config order
 const ordered = [...fleetItems].sort((a, b) => Number(Boolean(b.flagship)) - Number(Boolean(a.flagship)));
-
-// --- Now strip: hand-written headline + auto-derived "currently shipping" ---
-const now = COMING_SOON ? null : await getEntry('pages', 'now');
-const nowHeadline = now?.data.headline ?? '';
 ---
 
 {COMING_SOON ? <ComingSoon /> : (
@@ -47,12 +44,11 @@ const nowHeadline = now?.data.headline ?? '';
     <p class={`systems ${statusCls}`.trim()}><span class="dot"></span>{statusText}</p>
     <h1>Hi, I'm <span class="accent">Robert</span>.</h1>
     <p class="subhead">
-      I design, build, and run software products — an independent studio across finance, property,
-      and AI.
+      I am an Indie-Dev and I design, build, and run software products independently.
     </p>
     <div class="cta-row">
       <a href="#work" class="btn btn-primary">See the fleet</a>
-      <a href="mailto:kiro2160@gmail.com" class="btn btn-ghost">Get in touch</a>
+      <a href="#whoami" class="btn btn-ghost">Get in touch</a>
     </div>
   </section>
 
@@ -64,30 +60,6 @@ const nowHeadline = now?.data.headline ?? '';
     </p>
     <div class="fleet-grid">
       {ordered.map((item) => <FleetCard item={item} />)}
-    </div>
-  </section>
-
-  <!-- Now strip -->
-  <section class="section container">
-    <div class="now-strip reveal">
-      <p class="now-label">Now</p>
-      <p class="now-headline">{nowHeadline}</p>
-      {
-        shipping.length > 0 && (
-          <p class="now-shipping">
-            currently shipping:{' '}
-            {shipping.map((s, i) => (
-              <>
-                {i > 0 && ', '}
-                <a href={s.url} target="_blank" rel="noopener">
-                  {s.product} — {s.title}
-                </a>
-              </>
-            ))}
-          </p>
-        )
-      }
-      <p class="now-shipping"><a href="/now">full /now →</a></p>
     </div>
   </section>
 
@@ -113,11 +85,11 @@ const nowHeadline = now?.data.headline ?? '';
         <p class="empty-note">No public releases to show right now.</p>
       )
     }
-    <p class="now-shipping" style="margin-top:1.2rem"><a href="/log">full /log →</a></p>
+    <p class="more-link" style="margin-top:1.2rem"><a href="/log">full /log →</a></p>
   </section>
 
-  <!-- Contact — mailto placeholder; full form (Resend + Supabase) tracked in #40 -->
-  <section class="section container about">
+  <!-- Contact — the hero "Get in touch" scrolls here; mailto is the action -->
+  <section id="whoami" class="section container about">
     <h2 class="section-cmd"><span class="p">$</span>whoami</h2>
     <p>Building something, or just want to talk shop? My inbox is open.</p>
     <div class="cta-row" style="margin-top:1.4rem">

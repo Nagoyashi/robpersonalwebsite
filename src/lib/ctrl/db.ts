@@ -419,9 +419,11 @@ export interface FleetHealth {
   total: number;
 }
 
-// A check older than this can't be trusted as "current" — the cron pings every
-// ~5 min, so 30 min of silence means the pinger is stuck, not that all is well.
-const FRESH_MS = 30 * 60_000;
+// A check older than this can't be trusted as "current". Generous (6h) because
+// GitHub's scheduled cron is jittery (runs aren't reliably 5 min apart) and the
+// public hero badge is a build-time snapshot that only refreshes on deploy — a
+// tight window flips it to a confusing "unknown" on normal cron drift.
+const FRESH_MS = 6 * 60 * 60_000;
 
 /**
  * Roll each monitored project's latest check into one honest fleet state:
