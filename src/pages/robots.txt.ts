@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
-import { COMING_SOON } from '../config/site';
+import { INDEXABLE } from '../config/site';
 
-// Flag-aware robots.txt. Under construction the whole site is disallowed and the
-// sitemap is withheld, so the unfinished/legally-incomplete site isn't indexed.
-// When COMING_SOON flips to false this reverts to the normal allow-all + sitemap.
+// Flag-aware robots.txt. While the site isn't INDEXABLE (under construction OR a
+// soft-launched-but-noindex reveal) the whole site is disallowed and the sitemap
+// withheld, so it stays out of search. Once INDEXABLE: allow-all + sitemap.
 export const GET: APIRoute = () => {
-  const body = COMING_SOON
-    ? 'User-agent: *\nDisallow: /\n'
-    : 'User-agent: *\nAllow: /\n\nSitemap: https://kissrobert.com/sitemap-index.xml\n';
+  const body = INDEXABLE
+    ? 'User-agent: *\nAllow: /\n\nSitemap: https://kissrobert.com/sitemap-index.xml\n'
+    : 'User-agent: *\nDisallow: /\n';
   return new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 };
