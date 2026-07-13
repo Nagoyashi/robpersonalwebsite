@@ -5,12 +5,12 @@ import { COMING_SOON } from '../config/site';
 
 if (COMING_SOON) return Astro.redirect('/');
 
-const entry = await getEntry('pages', 'now');
-if (!entry) throw new Error('Missing src/content/now.md');
+const entry = await getEntry('pages', 'stack');
+if (!entry) throw new Error('Missing src/content/stack.md');
 const { Content } = await render(entry);
 ---
 
-<Base title="Now — Robert Kiss" description="What Robert Kiss is focused on right now.">
+<Base title="Stack — Robert Kiss" description="The tools and stack Robert Kiss builds with.">
   <section class="section container">
     <div class="prose">
       <a href="/" class="back-link">← back</a>
