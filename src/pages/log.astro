@@ -9,6 +9,9 @@ if (COMING_SOON) return Astro.redirect('/');
 
 // Full release history across the fleet (homepage shows only the latest 5).
 const releases = await recentReleases(fleet, 100);
+
+// Projects that actually have releases — drive the filter chips.
+const projects = [...new Set(releases.map((r) => r.product))];
 ---
 
 <Base title="Log — Robert Kiss" description="Release log across Robert Kiss's software fleet.">
@@ -18,20 +21,37 @@ const releases = await recentReleases(fleet, 100);
       <h1>Release log</h1>
       <p class="updated">Generated from GitHub releases at build time.</p>
     </div>
+
     {
       releases.length > 0 ? (
-        <ul class="log-list" style="max-width:70ch;margin:0 auto">
-          {releases.map((r) => (
-            <li class="log-row">
-              <span class="date">{fmtDate(r.date)}</span>
-              <span class="repo">{r.product}</span>
-              <a class="tag" href={r.url} target="_blank" rel="noopener">
-                {r.tag}
-              </a>
-              <span class="title">{r.title}</span>
-            </li>
-          ))}
-        </ul>
+        <div style="max-width:70ch;margin:0 auto">
+          {/* Filter chips — progressive: with JS off, all releases show and these are inert. */}
+          <div class="log-filter" id="log-filter">
+            <button class="log-chip active" data-filter="all" type="button">
+              All ({releases.length})
+            </button>
+            {projects.map((p) => (
+              <button class="log-chip" data-filter={p} type="button">
+                {p} ({releases.filter((r) => r.product === p).length})
+              </button>
+            ))}
+          </div>
+
+          <ul class="log-list" id="log-list">
+            {releases.map((r) => (
+              <li class="log-row" data-project={r.product}>
+                <span class="date">{fmtDate(r.date)}</span>
+                <span class="repo">{r.product}</span>
+                <a class="tag" href={r.url} target="_blank" rel="noopener">
+                  {r.tag}
+                </a>
+                <span class="title">{r.title}</span>
+              </li>
+            ))}
+          </ul>
+
+          <nav class="log-pager" id="log-pager" aria-label="Release log pages" />
+        </div>
       ) : (
         <p class="empty-note" style="max-width:70ch;margin:0 auto">
           No public releases to show right now.
@@ -40,3 +60,57 @@ const releases = await recentReleases(fleet, 100);
     }
   </section>
 </Base>
+
+<script>
+  // Progressive enhancement: filter by project + paginate (10/page). With JS
+  // disabled the full list renders server-side, so nothing is hidden.
+  const PAGE_SIZE = 10;
+  const rows = Array.from(document.querySelectorAll<HTMLLIElement>('#log-list .log-row'));
+  const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('#log-filter .log-chip'));
+  const pager = document.getElementById('log-pager');
+
+  if (rows.length && pager) {
+    let filter = 'all';
+    let page = 1;
+
+    const matches = () => rows.filter((r) => filter === 'all' || r.dataset.project === filter);
+
+    function render() {
+      const visible = matches();
+      const pages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+      page = Math.min(page, pages);
+      const start = (page - 1) * PAGE_SIZE;
+
+      rows.forEach((r) => (r.style.display = 'none'));
+      visible.slice(start, start + PAGE_SIZE).forEach((r) => (r.style.display = ''));
+
+      chips.forEach((c) => c.classList.toggle('active', c.dataset.filter === filter));
+
+      pager!.innerHTML =
+        pages > 1
+          ? Array.from({ length: pages }, (_, i) => {
+              const n = i + 1;
+              return `<button class="log-page${n === page ? ' active' : ''}" data-page="${n}" type="button">${n}</button>`;
+            }).join('')
+          : '';
+    }
+
+    document.getElementById('log-filter')?.addEventListener('click', (e) => {
+      const chip = (e.target as HTMLElement).closest<HTMLButtonElement>('.log-chip');
+      if (!chip) return;
+      filter = chip.dataset.filter ?? 'all';
+      page = 1;
+      render();
+    });
+
+    pager.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.log-page');
+      if (!btn) return;
+      page = Number(btn.dataset.page);
+      render();
+      document.getElementById('log-filter')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    render();
+  }
+</script>
