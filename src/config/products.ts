@@ -105,8 +105,6 @@ export const products: Product[] = [
     repo: { owner: 'Nagoyashi', name: 'pandavo', public: false },
     fallbackVersion: null,
     fallbackDate: null,
-    include: false, // stealth — pulled from the public fleet (handoff non-negotiable)
-    stealth: true, // control-center: ◈ stealth
   },
 ];
 
