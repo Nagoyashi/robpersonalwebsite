@@ -60,11 +60,11 @@ export const products: Product[] = [
     slug: 'spreadsheet-millionaire',
     name: 'SpreadsheetMillionaire',
     tagline:
-      'Personal-finance calculators — FIRE, compound interest, emergency fund, debt payoff — usable instantly, no signup.',
+      'Personal-finance calculators — FIRE, compound interest, emergency fund, debt payoff. Use instantly; sign in to save. Flask + React.',
     status: 'live',
     kind: 'app',
     siteUrl: 'https://www.spreadsheetmillionaire.com',
-    repo: { owner: 'Nagoyashi', name: 'spreadsheet-millionaire', public: false }, // private repo — no public repo link; live data needs the App token
+    repo: { owner: 'Nagoyashi', name: 'spreadsheet-millionaire', public: true }, // public repo — shows the repo link
     flagship: true,
     fallbackVersion: 'v0.9.0',
     fallbackDate: '2026-06-20',
@@ -73,7 +73,7 @@ export const products: Product[] = [
     slug: 'sabevalor',
     name: 'SabeValor',
     tagline:
-      'Instant property valuations for the Portuguese market; qualified seller leads routed to AMI-licensed agencies.',
+      'Instant Portuguese property valuations — sellers opt in to be contacted by AMI-licensed partner agencies; the qualified seller lead is the product.',
     status: 'beta',
     kind: 'app',
     siteUrl: 'https://sabevalor.com',
@@ -86,7 +86,7 @@ export const products: Product[] = [
   {
     slug: 'cutecumber',
     name: 'Cutecumber',
-    tagline: 'A privacy-first, tracker-free link-in-bio service. Built with Flask + SQLite.',
+    tagline: 'The cutest little link-in-bio — fast, private, no trackers, ever. Flask + SQLite on Fly.io.',
     status: 'live',
     kind: 'app',
     siteUrl: 'https://cutecumber.cc',
@@ -98,7 +98,7 @@ export const products: Product[] = [
     slug: 'pandavo',
     name: 'Pandavo',
     tagline:
-      'WhatsApp Business support platform — shared inbox, ticketing, and AI message triage. Built with NestJS + React.',
+      'Manage WhatsApp Business support from the browser — shared inbox, ticketing, analytics, and AI message classification. NestJS + Supabase + React.',
     status: 'building',
     kind: 'service',
     siteUrl: null, // not deployed yet
